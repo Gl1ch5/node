@@ -6,7 +6,7 @@
 
 import { state } from './state.js';
 import { createNode } from '../components/node.js';
-import { complete, streamCompletion, getApiKey, getModel, getProvider } from './aiUtils.js';
+import { complete, streamCompletion, getApiKey, getModel, getProvider, getBaseUrl, getHeaders } from './aiUtils.js';
 
 // Lazy renderEdges accessor to avoid circular import chain
 function getRenderEdges() {
@@ -248,6 +248,8 @@ async function buildApp() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
+import { installedMods, removeMod, handleModFile } from './modManager.js';
+
 export function initPanelManager() {
     loadFromStorage();
 
@@ -260,6 +262,7 @@ export function initPanelManager() {
 
     btnSettings?.addEventListener('click', () => {
         if (!settingsPanel) return;
+        settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'flex' : 'none';
         settingsPanel.classList.toggle('active');
     });
 
@@ -268,8 +271,144 @@ export function initPanelManager() {
         if (!settingsPanel) return;
         if (settingsPanel.classList.contains('active') && !settingsPanel.contains(e.target) && !e.target.closest('#btn-settings')) {
             settingsPanel.classList.remove('active');
+            settingsPanel.style.display = 'none';
         }
     });
+
+    // --- AI Settings Setup ---
+    const providerSelect = document.getElementById('lab-provider-select');
+    const groqSection = document.getElementById('lab-groq-section');
+    const deepseekSection = document.getElementById('lab-deepseek-section');
+    const groqKeyInput = document.getElementById('lab-api-key');
+    const deepseekKeyInput = document.getElementById('lab-deepseek-key');
+    const modelSelect = document.getElementById('lab-model-select');
+    const btnFetchModels = document.getElementById('btn-fetch-models');
+
+    // Restore saved API Keys
+    if (groqKeyInput) groqKeyInput.value = localStorage.getItem('nn_groq_key') || '';
+    if (deepseekKeyInput) deepseekKeyInput.value = localStorage.getItem('nn_deepseek_key') || '';
+    if (providerSelect) providerSelect.value = localStorage.getItem('nn_provider') || 'groq';
+
+    const DEEPSEEK_MODELS = [
+        { id: 'deepseek-chat', label: 'deepseek-chat (Default)' },
+        { id: 'deepseek-reasoner', label: 'deepseek-reasoner' }
+    ];
+
+    if (providerSelect) {
+        providerSelect.addEventListener('change', () => {
+            localStorage.setItem('nn_provider', providerSelect.value);
+            const isDeepSeek = providerSelect.value === 'deepseek';
+            groqSection.style.display = isDeepSeek ? 'none' : 'flex';
+            deepseekSection.style.display = isDeepSeek ? 'flex' : 'none';
+
+            if (isDeepSeek) {
+                modelSelect.innerHTML = '';
+                DEEPSEEK_MODELS.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id; opt.textContent = m.label;
+                    modelSelect.appendChild(opt);
+                });
+            } else {
+                modelSelect.innerHTML = '<option value="llama3-8b-8192">llama3-8b-8192 (Default)</option>';
+            }
+        });
+        // Trigger initial state
+        providerSelect.dispatchEvent(new Event('change'));
+    }
+
+    if (groqKeyInput) groqKeyInput.addEventListener('input', () => localStorage.setItem('nn_groq_key', groqKeyInput.value.trim()));
+    if (deepseekKeyInput) deepseekKeyInput.addEventListener('input', () => localStorage.setItem('nn_deepseek_key', deepseekKeyInput.value.trim()));
+
+    if (btnFetchModels) {
+        btnFetchModels.addEventListener('click', async () => {
+            const apiKey = getApiKey();
+            if (!apiKey) { alert('Введите API Key для загрузки моделей'); return; }
+            const provider = getProvider();
+            try {
+                btnFetchModels.textContent = '...';
+                if (provider === 'deepseek') {
+                    modelSelect.innerHTML = '';
+                    DEEPSEEK_MODELS.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id; opt.textContent = m.label;
+                        modelSelect.appendChild(opt);
+                    });
+                } else {
+                    const res = await fetch('https://api.groq.com/openai/v1/models', {
+                        headers: { 'Authorization': `Bearer ${apiKey}` }
+                    });
+                    if (!res.ok) throw new Error('Ошибка при загрузке моделей');
+                    const data = await res.json();
+                    modelSelect.innerHTML = '';
+                    data.data.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id; opt.textContent = m.id;
+                        modelSelect.appendChild(opt);
+                    });
+                }
+            } catch(e) {
+                alert(e.message);
+            } finally {
+                btnFetchModels.textContent = 'Загрузить Модели';
+            }
+        });
+    }
+
+    // --- Mods Setup ---
+    const modsListEl = document.getElementById('settings-mods-list');
+    const modUpload = document.getElementById('settings-mod-upload');
+
+    const renderModsList = () => {
+        if (!modsListEl) return;
+        modsListEl.innerHTML = '';
+        if (installedMods.length === 0) {
+            modsListEl.innerHTML = '<div style="font-size:11px;color:var(--text-muted);text-align:center;padding:8px 0;">Нет установленных модов</div>';
+            return;
+        }
+        installedMods.forEach((mod) => {
+            const item = document.createElement('div');
+            item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 0;border-bottom:1px solid var(--node-border);';
+            const nameEl = document.createElement('span');
+            nameEl.style.cssText = 'font-size:12px;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;';
+            nameEl.textContent = '🧩 ' + mod.name;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.style.cssText = 'background:transparent;border:none;color:#ff4444;cursor:pointer;font-size:18px;line-height:1;padding:0 2px;pointer-events:auto;';
+            removeBtn.textContent = '✕';
+            removeBtn.title = 'Удалить мод';
+            removeBtn.addEventListener('click', () => {
+                removeMod(mod.id);
+                renderModsList();
+            });
+
+            item.appendChild(nameEl);
+            item.appendChild(removeBtn);
+            modsListEl.appendChild(item);
+        });
+    };
+    renderModsList();
+
+    if (modUpload) {
+        modUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            // Need api wrapper to load mod
+            import('./state.js').then(m => {
+                import('../components/node.js').then(nm => {
+                    import('../components/edge.js').then(em => {
+                        import('./nodeRegistry.js').then(rm => {
+                            handleModFile(file, {
+                                state: m.state, createNode: nm.createNode, renderEdges: em.renderEdges,
+                                complete, streamCompletion, getApiKey, getModel, getProvider,
+                                registerNodeType: rm.registerNodeType
+                            });
+                            setTimeout(renderModsList, 500); // Wait for load
+                        });
+                    });
+                });
+            });
+        });
+    }
 
     // Add custom button
     document.getElementById('btn-custom-btn-add')?.addEventListener('click', () => {

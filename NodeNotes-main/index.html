@@ -12,11 +12,6 @@
 
     <!-- Панель управления -->
     <div id="top-panel">
-        <button class="panel-btn" id="btn-mode" title="Переключить режим">
-            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 9h-2V7h-2v5H6v2h2v5h2v-5h2v-2zm4 5h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-            <span id="mode-text">Режим: Nodes</span>
-        </button>
-        <div class="panel-divider"></div>
         <button class="panel-btn" id="btn-focus" title="Найти все заметки">
             <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
             Фокус
@@ -66,11 +61,43 @@
     </div>
 
     <!-- ⚙ Панель настроек -->
-    <div id="settings-panel" style="display:none; position:absolute; right:20px; top:80px; z-index:1000; background:var(--panel-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid var(--panel-border); border-radius:12px; padding:14px; width:300px; flex-direction:column; gap:10px; box-shadow:0 4px 24px var(--node-shadow); max-height:calc(100vh - 100px); overflow-y:auto;">
-        <div style="font-weight:600;font-size:14px;margin-bottom:2px;">⚙ Настройки панели</div>
+    <div id="settings-panel" style="display:none; position:absolute; right:20px; top:80px; z-index:1000; background:var(--panel-bg); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid var(--panel-border); border-radius:12px; padding:14px; width:320px; flex-direction:column; gap:10px; box-shadow:0 4px 24px var(--node-shadow); max-height:calc(100vh - 100px); overflow-y:auto;">
+        <div style="font-weight:600;font-size:16px;margin-bottom:2px;">⚙ Глобальные настройки</div>
 
-        <!-- Custom Button Form -->
-        <div style="font-size:11px;font-weight:600;color:#a855f7;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">+ Добавить кнопку на панель</div>
+        <!-- AI Settings -->
+        <div style="height:1px;background:var(--node-border);margin:4px 0;"></div>
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Глобальный ИИ</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <select id="lab-provider-select" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
+                <option value="groq">Groq</option>
+                <option value="deepseek">DeepSeek</option>
+            </select>
+
+            <div id="lab-groq-section" style="display:flex;flex-direction:column;gap:4px;">
+                <input type="password" id="lab-api-key" placeholder="Groq API Key (gsk_...)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
+            </div>
+            <div id="lab-deepseek-section" style="display:none;flex-direction:column;gap:4px;">
+                <input type="password" id="lab-deepseek-key" placeholder="DeepSeek API Key (sk-...)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
+            </div>
+
+            <select id="lab-model-select" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
+                <option value="llama3-8b-8192">llama3-8b-8192 (Default)</option>
+            </select>
+            <button id="btn-fetch-models" class="panel-btn" style="width:100%;justify-content:center;background:var(--text-main);color:var(--bg-color);padding:8px;font-size:11px;">Загрузить Модели</button>
+        </div>
+
+        <!-- Mods System -->
+        <div style="height:1px;background:var(--node-border);margin:4px 0;"></div>
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Моды (Ноды и кнопки)</div>
+        <div id="settings-mods-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">
+            <label style="font-size:11px;color:var(--text-muted);">Загрузить Мод (.js / .zip)</label>
+            <input type="file" id="settings-mod-upload" accept=".js,.zip" style="font-size:10px;width:100%;color:var(--text-main);pointer-events:auto;">
+        </div>
+
+        <!-- Legacy Custom Button Form -->
+        <div style="height:1px;background:var(--node-border);margin:4px 0;"></div>
+        <div style="font-size:11px;font-weight:600;color:var(--text-main);text-transform:uppercase;letter-spacing:0.5px;">Создать кнопку панели</div>
         <div style="display:flex;flex-direction:column;gap:6px;">
             <input id="settings-btn-name" type="text" placeholder="Название кнопки"
                 style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:7px 9px;font-size:12px;font-family:Inter,sans-serif;outline:none;pointer-events:auto;user-select:text;-webkit-user-select:text;box-sizing:border-box;">
@@ -79,75 +106,16 @@
             <textarea id="settings-btn-code" placeholder="JS-код кнопки&#10;// Доступно: state, createNode, renderEdges,&#10;// complete, streamCompletion, getApiKey, getModel" rows="5"
                 style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:7px 9px;font-size:11px;font-family:monospace;outline:none;resize:vertical;pointer-events:auto;user-select:text;-webkit-user-select:text;box-sizing:border-box;"></textarea>
             <button id="btn-custom-btn-add"
-                style="background:#a855f7;color:white;border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;pointer-events:auto;">
+                style="background:var(--text-main);color:var(--bg-color);border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;pointer-events:auto;">
                 Добавить на панель
             </button>
         </div>
 
         <!-- Existing custom buttons list -->
         <div style="height:1px;background:var(--node-border);margin:4px 0;"></div>
-        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Мои кнопки</div>
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Мои кнопки панели</div>
         <div id="settings-custom-list"></div>
 
-        <!-- Built-in button visibility (future) -->
-        <div style="height:1px;background:var(--node-border);margin:4px 0;"></div>
-        <div style="font-size:11px;color:var(--text-muted);">
-            Кастомные кнопки сохраняются между сессиями в localStorage.<br>
-            Документация: <code style="font-size:10px;">MODDING_API.md</code>
-        </div>
-    </div>
-
-    <!-- Меню Лаборатории (Плавающее) -->
-    <div id="lab-menu" style="display: none; position: absolute; left: 20px; top: 80px; z-index: 1000; background: var(--panel-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--panel-border); border-radius: 12px; padding: 12px; width: 260px; flex-direction: column; gap: 10px; box-shadow: 0 4px 24px var(--node-shadow); max-height: calc(100vh - 100px); overflow-y: auto;">
-        <div style="font-weight: 600; font-size: 14px; margin-bottom: 5px;">Лаборатория</div>
-
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 12px; color: var(--text-muted);" for="lab-provider-select">Провайдер:</label>
-            <select id="lab-provider-select" style="width: 100%; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--node-border); border-radius: 6px; padding: 8px; font-size: 12px;">
-                <option value="groq">Groq</option>
-                <option value="deepseek">DeepSeek</option>
-            </select>
-        </div>
-
-        <div id="lab-groq-section" style="display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 12px; color: var(--text-muted);">Groq API Key</label>
-            <input type="password" id="lab-api-key" style="width: 100%; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--node-border); border-radius: 6px; padding: 8px; font-size: 12px;" placeholder="gsk_...">
-        </div>
-
-        <div id="lab-deepseek-section" style="display: none; flex-direction: column; gap: 4px;">
-            <label style="font-size: 12px; color: var(--text-muted);">DeepSeek API Key</label>
-            <input type="password" id="lab-deepseek-key" style="width: 100%; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--node-border); border-radius: 6px; padding: 8px; font-size: 12px;" placeholder="sk-...">
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 12px; color: var(--text-muted);" for="lab-model-select">Модель:</label>
-            <select id="lab-model-select" style="width: 100%; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--node-border); border-radius: 6px; padding: 8px; font-size: 12px;">
-                <option value="llama3-8b-8192">llama3-8b-8192 (Default)</option>
-            </select>
-            <button id="btn-fetch-models" class="panel-btn" style="width: 100%; justify-content: center; background: var(--selection); color: var(--bg-color); padding: 8px; font-size: 11px;">Загрузить Модели</button>
-        </div>
-
-        <div style="height: 1px; background: var(--node-border); margin: 5px 0;"></div>
-
-        <div style="font-weight: 500; font-size: 12px; color: var(--text-muted);">Добавить ноду:</div>
-        <button id="btn-add-input-node" class="panel-btn" style="width: 100%; justify-content: center; background: var(--grid-main);">+ Input Notes Node</button>
-        <button id="btn-add-story-node" class="panel-btn" style="width: 100%; justify-content: center; background: var(--grid-main);">📖 Book Generator Node</button>
-        <button id="btn-add-chat-node" class="panel-btn" style="width: 100%; justify-content: center; background: var(--grid-main);">💬 Chat Node</button>
-        <button id="btn-add-export-node" class="panel-btn" style="width: 100%; justify-content: center; background: var(--grid-main);">📤 Export Node</button>
-
-        <div style="height: 1px; background: var(--node-border); margin: 5px 0;"></div>
-
-        <div style="height: 1px; background: var(--node-border); margin: 5px 0;"></div>
-
-        <div style="font-weight: 500; font-size: 12px; color: var(--text-muted);">Загруженные Моды:</div>
-        <div id="lab-mods-list" style="display: flex; flex-direction: column; gap: 4px;"></div>
-
-        <div style="height: 1px; background: var(--node-border); margin: 5px 0;"></div>
-
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 12px; color: var(--text-muted);">Загрузить Мод (.js / .zip)</label>
-            <input type="file" id="lab-mod-upload" accept=".js,.zip" style="font-size: 10px; width: 100%; color: var(--text-main);">
-        </div>
     </div>
 
     <script type="module" src="js/main.js"></script>
