@@ -1,19 +1,45 @@
-127.0.0.1 - - [26/Mar/2026 06:43:05] code 404, message File not found
-127.0.0.1 - - [26/Mar/2026 06:43:05] "GET /robots.txt HTTP/1.1" 404 -
-127.0.0.1 - - [26/Mar/2026 06:43:18] "GET / HTTP/1.0" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /css/main.css HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /css/workspace.css HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /css/lab.css HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /css/mobile.css HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /css/theme.css HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /css/components/panel.css HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /css/components/node.css HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /js/core/state.js HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /js/components/node.js HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /js/lab/labManager.js HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /js/components/topPanel.js HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /js/core/workspace.js HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /js/components/edge.js HTTP/1.1" 200 -
-127.0.0.1 - - [26/Mar/2026 06:44:49] "GET /js/lab/labNodes.js HTTP/1.1" 200 -
+Starting up http-server, serving .
+
+http-server version: 14.1.1
+
+http-server settings:
+CORS: disabled
+Cache: 3600 seconds
+Connection Timeout: 120 seconds
+Directory Listings: visible
+AutoIndex: visible
+Serve GZIP Files: false
+Serve Brotli Files: false
+Default File Extension: none
+
+Available on:
+  http://127.0.0.1:3000
+  http://192.168.0.2:3000
+Hit CTRL-C to stop the server
+
+[2026-03-26T23:51:51.880Z]  "GET /" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+(node:20692) [DEP0066] DeprecationWarning: OutgoingMessage.prototype._headers is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[2026-03-26T23:51:51.939Z]  "GET /css/main.css" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:51.960Z]  "GET /js/main.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.098Z]  "GET /css/theme.css" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.101Z]  "GET /css/workspace.css" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.110Z]  "GET /css/components/panel.css" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.111Z]  "GET /css/components/node.css" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.114Z]  "GET /css/lab.css" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.118Z]  "GET /css/mobile.css" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.123Z]  "GET /js/core/state.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.123Z]  "GET /js/core/workspace.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.133Z]  "GET /js/components/node.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.136Z]  "GET /js/components/topPanel.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.138Z]  "GET /js/core/panelManager.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.138Z]  "GET /js/core/persistence.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.139Z]  "GET /js/core/modManager.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.143Z]  "GET /js/components/nodes/textNode.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.163Z]  "GET /js/components/nodes/aiNode.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.164Z]  "GET /js/components/nodes/exportNode.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.164Z]  "GET /js/components/nodes/bookNode.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.165Z]  "GET /js/components/edge.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.165Z]  "GET /js/core/aiUtils.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.166Z]  "GET /js/core/nodeRegistry.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"
+[2026-03-26T23:51:52.205Z]  "GET /js/components/nodeSearch.js" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36"

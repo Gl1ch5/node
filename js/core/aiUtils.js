@@ -53,10 +53,15 @@ export function getModel(provider = getProvider()) {
  */
 export async function streamCompletion(body, onChunk, onToolCall = null) {
     const provider = getProvider();
+    const model = getModel(provider);
+
+    // Inject model if not provided
+    const payload = { model, ...body, stream: true };
+
     const response = await fetch(`${getBaseUrl(provider)}/chat/completions`, {
         method: 'POST',
         headers: getHeaders(provider),
-        body: JSON.stringify({ ...body, stream: true })
+        body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -132,10 +137,14 @@ export async function streamCompletion(body, onChunk, onToolCall = null) {
  */
 export async function complete(body) {
     const provider = getProvider();
+    const model = getModel(provider);
+
+    const payload = { model, ...body };
+
     const response = await fetch(`${getBaseUrl(provider)}/chat/completions`, {
         method: 'POST',
         headers: getHeaders(provider),
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload)
     });
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
