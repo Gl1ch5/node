@@ -5,7 +5,7 @@ export function initExportNode() {
     registerNodeType('export', {
         title: '📤 Export Box',
         category: 'Output',
-        style: { border: '2px solid #22c55e' },
+        style: { border: '2px solid var(--text-main)' },
         setup: (node, id) => {
             const el = node.el;
             const body = el.querySelector('.node-body');
@@ -27,7 +27,7 @@ export function initExportNode() {
 
             const expBtn = document.createElement('button');
             expBtn.textContent = '💾 Скачать';
-            expBtn.style.cssText = `background:#22c55e;color:white;border:none;border-radius:8px;padding:10px;width:100%;font-size:13px;font-weight:600;cursor:pointer;`;
+            expBtn.style.cssText = `background:var(--text-main);color:var(--bg-color);border:none;border-radius:8px;padding:10px;width:100%;font-size:13px;font-weight:600;cursor:pointer;`;
             expBtn.addEventListener('pointerdown', e => e.stopPropagation());
 
             expBtn.addEventListener('click', () => {

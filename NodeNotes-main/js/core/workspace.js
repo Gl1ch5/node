@@ -115,15 +115,18 @@ export function initWorkspaceEvents() {
             lastTapTime = now;
         }
 
-        if (isMiddleMouse || (e.pointerType !== 'mouse' && activePointers.size > 1)) {
+        // Pan on middle mouse, OR on touch/pen (mobile) single finger background click.
+        if (isMiddleMouse || (e.pointerType !== 'mouse' && isBackgroundClick)) {
             // Начало панорамирования фона
             isPanning = true;
             panStartX = e.clientX;
             panStartY = e.clientY;
             transformStartX = state.transform.x;
             transformStartY = state.transform.y;
-        } else if (isBackgroundClick && e.button === 0) {
-            // Начало выделения рамкой
+            // Clear selection if panning on background
+            if (isBackgroundClick && !e.shiftKey) selectNode(null);
+        } else if (isBackgroundClick && e.button === 0 && e.pointerType === 'mouse') {
+            // Начало выделения рамкой (Только для мыши)
             isSelecting = true;
             selectionStartX = e.clientX;
             selectionStartY = e.clientY;

@@ -21,13 +21,30 @@ let suppressSave = false;  // prevent re-saving while restoring
 // ── Serialise current workspace (nodes + edges + transform) ─────────────────
 function serialise() {
     return {
-        nodes: Object.entries(state.nodes).map(([id, n]) => ({
-            id,
-            x: Math.round(n.x),
-            y: Math.round(n.y),
-            title: n.el.querySelector('.node-title')?.value ?? '',
-            text:  n.el.querySelector('.node-textarea')?.value ?? ''
-        })),
+        nodes: Object.entries(state.nodes).map(([id, n]) => {
+            const nodeData = {
+                id,
+                x: Math.round(n.x),
+                y: Math.round(n.y),
+                type: n.type || 'text',
+                title: n.el.querySelector('.node-title')?.value ?? '',
+                customFields: {}
+            };
+
+            // Serialize all input fields, textareas, and selects inside the node body
+            const body = n.el.querySelector('.node-body');
+            if (body) {
+                const inputs = body.querySelectorAll('input, textarea, select');
+                inputs.forEach((input, index) => {
+                    if (input.type === 'checkbox') {
+                        nodeData.customFields[index] = input.checked;
+                    } else {
+                        nodeData.customFields[index] = input.value;
+                    }
+                });
+            }
+            return nodeData;
+        }),
         edges: state.edges.map(e => ({ ...e })),
         transform: { ...state.transform }
     };
@@ -59,13 +76,33 @@ export async function applySnapshot(data, { keepHistory = false } = {}) {
     // Recreate nodes — build an id-remap table in case ids clash
     const idMap = {};
     (data.nodes || []).forEach(n => {
-        const newId = createNode(n.x, n.y);
+        const newId = createNode(n.x, n.y, n.type || 'text');
         idMap[n.id] = newId;
         const nodeEl = state.nodes[newId].el;
         const titleEl = nodeEl.querySelector('.node-title');
-        const textEl  = nodeEl.querySelector('.node-textarea');
+
         if (titleEl) titleEl.value = n.title || '';
-        if (textEl)  textEl.value  = n.text  || '';
+
+        // Restore custom fields (inputs, textareas, selects)
+        if (n.customFields) {
+            const body = nodeEl.querySelector('.node-body');
+            if (body) {
+                const inputs = body.querySelectorAll('input, textarea, select');
+                inputs.forEach((input, index) => {
+                    if (n.customFields[index] !== undefined) {
+                        if (input.type === 'checkbox') {
+                            input.checked = n.customFields[index];
+                        } else {
+                            input.value = n.customFields[index];
+                        }
+                    }
+                });
+            }
+        } else {
+            // Backwards compatibility with old format
+            const textEl = nodeEl.querySelector('.node-textarea');
+            if (textEl) textEl.value = n.text || '';
+        }
     });
 
     // Recreate edges with remapped ids

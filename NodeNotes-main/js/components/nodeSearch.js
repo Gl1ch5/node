@@ -114,8 +114,22 @@ export function initNodeSearch() {
             lastY = clientY;
             pendingEdge = edgeData;
 
-            searchMenu.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
-            searchMenu.style.top = Math.min(clientY, window.innerHeight - 300) + 'px';
+            // Adjust dimensions for mobile constraints
+            const menuWidth = 200;
+            const menuHeight = 300; // max-height
+
+            let left = clientX;
+            let top = clientY;
+
+            if (left + menuWidth > window.innerWidth) {
+                left = window.innerWidth - menuWidth - 10;
+            }
+            if (top + menuHeight > window.innerHeight) {
+                top = window.innerHeight - menuHeight - 10;
+            }
+
+            searchMenu.style.left = Math.max(10, left) + 'px';
+            searchMenu.style.top = Math.max(10, top) + 'px';
             searchMenu.style.display = 'flex';
 
             renderList();
