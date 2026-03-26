@@ -59,7 +59,7 @@ let transformStartX = 0, transformStartY = 0;
 
 const selectionBox = document.createElement('div');
 selectionBox.id = 'selection-box';
-selectionBox.style.cssText = 'display:none; position:absolute; border:1px solid #a855f7; background:rgba(168,85,247,0.2); z-index:1500; pointer-events:none;';
+selectionBox.style.cssText = 'display:none; position:absolute; border:1px solid var(--text-main); background:rgba(128,128,128,0.2); z-index:1500; pointer-events:none;';
 document.body.appendChild(selectionBox);
 
 /**
@@ -74,7 +74,10 @@ function isBackgroundTarget(el) {
     return false;
 }
 
+import { initNodeSearch } from '../components/nodeSearch.js';
+
 export function initWorkspaceEvents() {
+    const searchMenu = initNodeSearch();
     // --- Touch / Pointer events on document for pan ---
     document.addEventListener('pointerdown', (e) => {
         // Middle mouse button (button === 1) always pans, regardless of target
@@ -242,14 +245,17 @@ export function initWorkspaceEvents() {
         return item;
     };
 
+    let longPressTimer;
+    let isLongPress = false;
+
     window.addEventListener('contextmenu', (e) => {
         // Only if clicking on background or nodes layer
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; 
         e.preventDefault();
 
-        contextMenu.innerHTML = ''; // reset options
-
         if (state.selectedNodeIds.size > 0) {
+            // Still show standard actions if nodes are selected
+            contextMenu.innerHTML = '';
             contextMenu.appendChild(createMenuItem('📋 Копировать', () => import('../components/node.js').then(m => m.copySelectedNodes())));
             contextMenu.appendChild(createMenuItem('🔗 Объединить', () => import('../components/node.js').then(m => m.groupSelectedNodes())));
             contextMenu.appendChild(createMenuItem('🗑 Удалить все', () => {
@@ -259,23 +265,41 @@ export function initWorkspaceEvents() {
                     state.selectedNodeIds.clear();
                 });
             }));
+            contextMenu.style.left = e.clientX + 'px';
+            contextMenu.style.top = e.clientY + 'px';
+            contextMenu.style.display = 'block';
         } else {
-            contextMenu.appendChild(createMenuItem('➕ Создать ноду', () => {
-                const wPos = screenToWorld(e.clientX, e.clientY);
-                createNode(wPos.x, wPos.y);
-            }));
-            contextMenu.appendChild(createMenuItem('📋 Вставить', () => { 
-                const wPos = screenToWorld(e.clientX, e.clientY);
-                import('../components/node.js').then(m => m.pasteNodes(wPos.x, wPos.y)); 
-            }));
+            // Open Blender-style Add Menu on empty space right click
+            contextMenu.style.display = 'none';
+            searchMenu.open(e.clientX, e.clientY);
         }
-
-        contextMenu.style.left = e.clientX + 'px';
-        contextMenu.style.top = e.clientY + 'px';
-        contextMenu.style.display = 'block';
     });
 
     document.addEventListener('pointerdown', (e) => {
         if (!contextMenu.contains(e.target)) contextMenu.style.display = 'none';
+
+        // Mobile long press to open search menu
+        if (e.pointerType !== 'mouse' && isBackgroundTarget(e.target) && state.selectedNodeIds.size === 0) {
+            isLongPress = false;
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                searchMenu.open(e.clientX, e.clientY);
+                // Vibrate if supported
+                if (navigator.vibrate) navigator.vibrate(50);
+            }, 500);
+        }
     });
+
+    document.addEventListener('pointermove', () => clearTimeout(longPressTimer));
+    document.addEventListener('pointerup', () => clearTimeout(longPressTimer));
+    document.addEventListener('pointercancel', () => clearTimeout(longPressTimer));
 }
+
+// Export search menu for edge connection drops
+export let searchMenuInstance = null;
+setTimeout(() => {
+    // Wait for init
+    import('../components/nodeSearch.js').then(m => {
+        searchMenuInstance = m;
+    });
+}, 100);

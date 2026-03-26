@@ -148,11 +148,14 @@ export function groupSelectedNodes() {
     renderEdges();
 }
 
-export function createNode(worldX, worldY) {
+import { getNodeDefinition } from '../core/nodeRegistry.js';
+
+export function createNode(worldX, worldY, typeName = 'text') {
     const id = genId();
     const nodeEl = document.createElement('div');
     nodeEl.className = 'node';
     nodeEl.id = id;
+    nodeEl.dataset.type = typeName;
     nodeEl.style.left = `${worldX}px`;
     nodeEl.style.top = `${worldY}px`;
     state.zIndexCounter++;
@@ -161,10 +164,13 @@ export function createNode(worldX, worldY) {
     const gripIcon = `<svg viewBox="0 0 24 24"><circle cx="8" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="8" cy="18" r="2"/><circle cx="16" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg>`;
     const trashIcon = `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
 
+    const def = getNodeDefinition(typeName) || getNodeDefinition('text');
+    const title = def?.title || 'Заметка';
+
     nodeEl.innerHTML = `
         <div class="node-header">
             <div class="drag-icon">${gripIcon}</div>
-            <input type="text" class="node-title" value="Заметка">
+            <input type="text" class="node-title" value="${title}">
             <button class="node-delete-btn" title="Удалить ноду">${trashIcon}</button>
         </div>
         <div class="node-body">
@@ -178,7 +184,17 @@ export function createNode(worldX, worldY) {
 
     nodesContainer.appendChild(nodeEl);
     resizeObserver.observe(nodeEl);
-    state.nodes[id] = { el: nodeEl, x: worldX, y: worldY };
+    state.nodes[id] = { el: nodeEl, x: worldX, y: worldY, type: typeName };
+
+    // Apply custom styles from definition
+    if (def?.style) {
+        Object.assign(nodeEl.style, def.style);
+    }
+
+    // Call custom setup from definition
+    if (def?.setup) {
+        def.setup(state.nodes[id], id);
+    }
 
     // Логика кнопки удаления
     const deleteBtn = nodeEl.querySelector('.node-delete-btn');
@@ -300,18 +316,20 @@ export function createNode(worldX, worldY) {
                         createEdge(startNodeId, startType, targetNode, targetType);
                     }
                 } else if (dropEl && (dropEl.tagName === 'BODY' || dropEl.tagName === 'CANVAS' || dropEl.id === 'workspace')) {
-                    // Автосоздание ноды
-                    const wPos = screenToWorld(upEvt.clientX, upEvt.clientY);
-                    let newX = wPos.x, newY = wPos.y - 45;
+                    // Open search menu to create node and connect
                     let tType = 'in';
+                    if (startType === 'out') { tType = 'in'; }
+                    else if (startType === 'in') { tType = 'out'; }
+                    else if (startType === 'bottom') { tType = 'top'; }
+                    else if (startType === 'top') { tType = 'bottom'; }
 
-                    if (startType === 'out') { newX = wPos.x + 30; tType = 'in'; }
-                    else if (startType === 'in') { newX = wPos.x - 310; tType = 'out'; }
-                    else if (startType === 'bottom') { newY = wPos.y + 30; newX = wPos.x - 140; tType = 'top'; }
-                    else if (startType === 'top') { newY = wPos.y - 200; newX = wPos.x - 140; tType = 'bottom'; }
-
-                    const newNodeId = createNode(newX, newY);
-                    createEdge(startNodeId, startType, newNodeId, tType);
+                    import('../core/workspace.js').then(m => {
+                        if (m.searchMenuInstance) {
+                            m.searchMenuInstance.getSearchMenu().open(upEvt.clientX, upEvt.clientY, {
+                                startNodeId, startType, targetType: tType
+                            });
+                        }
+                    });
                 }
 
                 tempPath.remove();

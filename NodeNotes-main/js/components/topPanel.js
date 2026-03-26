@@ -1,16 +1,8 @@
 import { state } from '../core/state.js';
 import { updateTransform, drawGrid } from '../core/workspace.js';
-import { toggleLabMode } from '../lab/labManager.js';
 import { groupSelectedNodes } from './node.js';
 
 export function initTopPanel() {
-    const btnMode = document.getElementById('btn-mode');
-    const modeText = document.getElementById('mode-text');
-
-    btnMode.addEventListener('click', () => {
-        const isLabMode = toggleLabMode();
-        modeText.textContent = isLabMode ? "Режим: Lab" : "Режим: Nodes";
-    });
 
     document.getElementById('btn-group').addEventListener('click', () => {
         groupSelectedNodes();
