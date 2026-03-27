@@ -1,220 +1,202 @@
-# NodeNotes — Документация API и кастомных кнопок
+# NodeNotes — Документация по Модам (API)
 
-Добро пожаловать в руководство по расширению NodeNotes! Здесь описаны два способа добавить свои функции: **кнопки на панели** (через вкладку Настройки) и **Mод-скрипты** (через Лабораторию).
+Добро пожаловать в руководство по созданию модов для NodeNotes!
+Моды — это универсальный способ добавлять новые ноды, кнопки на панель инструментов и любые другие функции в редактор без изменения его исходного кода.
 
 ---
 
-## ⚙️ Кастомные кнопки панели
+## 📦 Формат мода
 
-### Как добавить
+Начиная с последней версии, моды принимаются **только в формате `.zip` архивов**.
 
-1. Нажмите кнопку **⚙ Настройки** на верхней панели.
-2. Заполните форму:
-   - **Название** — текст под иконкой кнопки.
-   - **SVG-иконка** (необязательно) — вставьте `<svg>...</svg>` код. Если пусто, используется иконка по умолчанию.
-   - **JS-код** — код, выполняемый при нажатии кнопки.
-3. Нажмите **«Добавить на панель»**.
-
-Кнопки сохраняются в `localStorage` и появляются при каждом перезапуске.
-
-### Контекст выполнения кода кнопки
-
-В JS-коде кнопки доступны следующие переменные:
-
-```javascript
-// state — текущее состояние активного воркспейса
-state.nodes     // { [id]: { el: HTMLElement, x, y } }
-state.edges     // [{ fromNode, toNode, fromType, toType }]
-state.transform // { x, y, scale }
-state.selectedNodeIds // Set<string>
-
-// Создание ноды в центре экрана
-const id = createNode(x, y);
-
-// Перерисовать все связи
-renderEdges();
-
-// AI: одиночный запрос (возвращает Promise<{content, tool_calls}>)
-const msg = await complete({ model, messages });
-
-// AI: стриминг (вызывает onChunk с каждым кусочком текста)
-await streamCompletion({ model, messages }, (chunk) => { /* ... */ });
-
-// Получить API ключ текущего провайдера
-const key = getApiKey();
-
-// Получить выбранную модель
-const model = getModel();
-
-// Получить провайдера ('groq' | 'deepseek')
-const provider = getProvider();
+Ваш архив **обязательно** должен содержать файл `mod.json` в корне.
+Пример структуры ZIP-архива:
+```text
+my_awesome_mod.zip
+ ├── mod.json
+ ├── main.js
+ └── icon.png
 ```
 
-### Пример 1 — Посчитать слова во всех нодах
+### Структура `mod.json`
+
+Файл `mod.json` — это паспорт вашего мода. Он сообщает системе, как его загружать и отображать в панели модов.
+
+```json
+{
+  "name": "My Awesome Mod",
+  "description": "Добавляет супер-кнопку и новую ноду для генерации списков.",
+  "main": "main.js",
+  "icon": "icon.png"
+}
+```
+* **`name`** (строка, обязательно): Название мода.
+* **`main`** (строка, обязательно): Имя главного JS-файла, который будет выполнен при старте.
+* **`description`** (строка): Краткое описание того, что делает мод.
+* **`icon`** (строка): Относительный путь к картинке внутри ZIP (например, `icon.png`, `icon.svg` или `icon.jpg`). Также можно передать строку с SVG-кодом напрямую или эмодзи.
+
+---
+
+## 🛠 API Модов
+
+Когда ваш `main.js` запускается, он получает доступ к объекту `api`, который содержит все необходимые инструменты:
 
 ```javascript
-let total = 0;
-Object.values(state.nodes).forEach(n => {
-    const text = n.el.querySelector('.node-textarea')?.value || '';
-    total += text.trim().split(/\s+/).filter(Boolean).length;
-});
-alert(`Всего слов в нодах: ${total}`);
-```
-
-### Пример 2 — Перевести выделенную ноду на английский (с AI)
-
-```javascript
-const selectedId = [...state.selectedNodeIds][0];
-if (!selectedId) { alert('Выберите ноду'); return; }
-
-const ta = state.nodes[selectedId].el.querySelector('.node-textarea');
-const original = ta.value;
-if (!original.trim()) return;
-
-const msg = await complete({
-    model: getModel(),
-    messages: [
-        { role: 'system', content: 'Translate the text to English. Return only the translation.' },
-        { role: 'user', content: original }
-    ]
-});
-ta.value = msg.content;
-```
-
-### Пример 3 — Стриминг: суммаризировать все ноды в новую ноду
-
-```javascript
-const notes = Object.values(state.nodes)
-    .map(n => n.el.querySelector('.node-textarea')?.value || '')
-    .join('\n\n');
-
-const cx = state.transform.x + window.innerWidth / 2 / state.transform.scale;
-const cy = state.transform.y + window.innerHeight / 2 / state.transform.scale;
-const newId = createNode(cx + 100, cy);
-const newTa = state.nodes[newId].el.querySelector('.node-textarea');
-newTa.value = '';
-
-await streamCompletion(
-    { model: getModel(), messages: [
-        { role: 'system', content: 'Summarize the following notes concisely.' },
-        { role: 'user', content: notes }
-    ]},
-    (chunk) => { newTa.value += chunk; }
-);
-```
-
-### SVG-иконка (пример)
-
-```html
-<svg viewBox="0 0 24 24">
-  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-</svg>
+const {
+    state,              // { nodes: {}, edges: [], selectedNodeIds: Set, transform: {} }
+    createNode,         // функция: (worldX, worldY, typeName) => nodeId
+    registerNodeType,   // функция: (typeName, definitionObj) => void
+    renderEdges,        // функция: () => void (перерисовывает связи на холсте)
+    complete,           // AI: one-shot запрос (работает через настройки пользователя)
+    streamCompletion    // AI: стриминг запрос
+} = api;
 ```
 
 ---
 
-## 🔬## Форматы модов
+## 🚀 Примеры создания модов
 
-Мод можно загрузить двумя способами через кнопку **Загрузить Мод (.js / .zip)**:
-1. **Единичный `.js` файл**: Содержит весь код мода открытым текстом.
-2. **Архив `.zip`**: Если ваш мод сложный, вы можете запаковать его в ZIP. Главное требование — **код должен находиться в файле `main.js` в корне архива.** Все ресурсы и данные внутри ZIP вы сможете обрабатывать из этого JS файла (при необходимости используя JSZip напрямую для чтения других файлов из архива).
+### 1. Добавление кастомной кнопки на верхнюю панель
 
-В обоих случаях код будет выполнен в изолированном контексте, куда передан объект `api`.:
+В этом примере мы добавим кнопку "Объединить", которая собирает текст из всех нод и создает одну гигантскую ноду.
 
+**`main.js`**:
 ```javascript
-// api.createLabNode(title, description, xOffset, yOffset, setupCallback)
-// api.state — состояние активного воркспейса
-// api.workspaces — { main, lab }
+const { state, createNode } = api;
 
-const { createLabNode, state } = api;
-```
-
-### Пример мода — Нода реверса текста
-
-```javascript
-const { createLabNode, state } = api;
-const labMenu = document.getElementById('lab-menu');
-
+// 1. Создаем HTML элемент кнопки
 const btn = document.createElement('button');
 btn.className = 'panel-btn';
-btn.style.cssText = 'width:100%;justify-content:center;';
-btn.textContent = '+ Reverse Text Node';
+btn.innerHTML = `
+  <svg viewBox="0 0 24 24"><path d="M4 18h16v-2H4v2zM4 13h16v-2H4v2zM4 6v2h16V6H4z"/></svg>
+  Объединить
+`;
 
+// 2. Добавляем логику при клике
 btn.addEventListener('click', () => {
-    createLabNode("Reverse Text", "Reverses connected text", 150, 0, (node, id, textArea) => {
-        const runBtn = document.createElement('button');
-        runBtn.textContent = "Run Reverse";
-        runBtn.className = "lab-btn";
-        runBtn.style.cssText = "margin-top:10px;width:100%;pointer-events:auto;";
+    const nodeIds = Object.keys(state.nodes);
+    if (nodeIds.length === 0) return;
 
-        runBtn.addEventListener('pointerdown', (e) => {
-            e.stopPropagation();
-            const edge = state.edges.find(e => e.toNode === id && e.toType === 'in');
-            if (!edge) { textArea.value = "No input connected."; return; }
-            const src = state.nodes[edge.fromNode];
-            if (src) textArea.value = src.el.querySelector('.node-textarea').value.split('').reverse().join('');
-        });
-
-        node.el.querySelector('.node-body').appendChild(runBtn);
+    let combinedText = "";
+    nodeIds.forEach(id => {
+        const n = state.nodes[id];
+        const text = n.el.querySelector('.node-textarea')?.value || '';
+        if (text) combinedText += text + "\n\n";
     });
+
+    // Создаем новую ноду в центре
+    const cx = state.transform.x + window.innerWidth / 2 / state.transform.scale;
+    const cy = state.transform.y + window.innerHeight / 2 / state.transform.scale;
+
+    const newId = createNode(cx, cy, 'text');
+    state.nodes[newId].el.querySelector('.node-title').value = "Объединенные записи";
+    state.nodes[newId].el.querySelector('.node-textarea').value = combinedText;
 });
 
-labMenu.appendChild(btn);
+// 3. Встраиваем кнопку в панель (находим разделитель и вставляем перед ним)
+const topPanel = document.getElementById('top-panel');
+if (topPanel) {
+    const divider = topPanel.querySelector('.panel-divider');
+    if (divider) {
+        topPanel.insertBefore(btn, divider);
+    } else {
+        topPanel.appendChild(btn);
+    }
+}
+```
+
+### 2. Добавление новой Ноды (List Generator)
+
+Этот мод добавляет новую ноду в меню по правому клику (в раздел `Custom`), которая генерирует нумерованный список.
+
+**`main.js`**:
+```javascript
+const { registerNodeType, state } = api;
+
+registerNodeType('list_generator', {
+    title: '📝 Генератор списков',
+    category: 'Custom',
+    style: { border: '2px solid #4ade80', minWidth: '250px' },
+
+    // Функция setup вызывается при создании DOM-элемента ноды
+    setup: (node, id) => {
+        const body = node.el.querySelector('.node-body');
+
+        // Прячем стандартную текстовую область, если она нам не нужна
+        const defaultTa = body.querySelector('.node-textarea');
+        defaultTa.style.display = 'none';
+
+        // Создаем свой интерфейс
+        const ui = document.createElement('div');
+        ui.style.display = 'flex';
+        ui.style.flexDirection = 'column';
+        ui.style.gap = '8px';
+
+        const inputCount = document.createElement('input');
+        inputCount.type = 'number';
+        inputCount.min = '1';
+        inputCount.max = '100';
+        inputCount.value = '5';
+        inputCount.style.cssText = `background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:4px;padding:4px;`;
+
+        const btn = document.createElement('button');
+        btn.textContent = 'Создать список';
+        btn.style.cssText = `background:var(--text-main);color:var(--bg-color);border:none;border-radius:4px;padding:6px;cursor:pointer;pointer-events:auto;`;
+
+        const output = document.createElement('textarea');
+        output.style.cssText = `background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:4px;padding:4px;min-height:100px;`;
+
+        // Логика кнопки
+        btn.addEventListener('pointerdown', e => e.stopPropagation()); // чтобы не перетаскивалась нода при клике
+        inputCount.addEventListener('pointerdown', e => e.stopPropagation());
+        output.addEventListener('pointerdown', e => e.stopPropagation());
+
+        btn.addEventListener('click', () => {
+            const count = parseInt(inputCount.value) || 5;
+            let list = [];
+            for(let i=1; i<=count; i++) {
+                list.push(`${i}. Элемент списка ${i}`);
+            }
+            output.value = list.join('\n');
+
+            // Сохраняем в дефолтную текстарею для совместимости с экспортом (по желанию)
+            defaultTa.value = output.value;
+        });
+
+        ui.appendChild(document.createTextNode('Количество строк:'));
+        ui.appendChild(inputCount);
+        ui.appendChild(btn);
+        ui.appendChild(output);
+
+        body.appendChild(ui);
+    }
+});
 ```
 
 ---
 
-## 🤖 Встроенные AI-кнопки панели
+## 🤖 Работа с AI из мода
 
-| Кнопка | Действие |
-|--------|----------|
-| **Авто-названия** | Называет ноды без заголовка (используя содержимое) через AI |
-| **Орфография** | Исправляет орфографию в выделенных (или всех) нодах |
-| **Приложение** | Генерирует полноценное HTML-приложение по содержимому нод (с закачкой) |
-
-Все кнопки используют выбранного провайдера и API ключ из меню **Лаборатории**.
-
----
-
-## 🌊 Streaming & Tool Calling (для разработчиков)
-
-`aiUtils.js` экспортирует:
+Вы можете вызывать AI-модели напрямую из вашего мода, используя `api.streamCompletion`.
 
 ```javascript
-// Стриминг SSE
-await streamCompletion(body, onChunk, onToolCall?)
-//   body: стандартное тело запроса OpenAI Chat Completions
-//   onChunk: (textDelta: string) => void — вызывается на каждый кусочек
-//   onToolCall: (name, args, id) => void — вызывается в конце при tool_calls
+const { streamCompletion } = api;
 
-// One-shot запрос
-const msg = await complete(body)
-//   возвращает { content, tool_calls? }
-
-// Определить инструмент для tool calling
-const tool = defineTool(name, description, jsonSchemaParameters)
-```
-
-### Пример с tool calling
-
-```javascript
-import { streamCompletion, defineTool } from './js/core/aiUtils.js';
-
-const tools = [
-    defineTool('get_weather', 'Get current weather', {
-        type: 'object',
-        properties: { city: { type: 'string' } },
-        required: ['city']
-    })
-];
-
+// ... внутри обработчика клика ...
 await streamCompletion(
-    { model: 'llama3-8b-8192', messages: [...], tools },
-    (chunk) => console.log(chunk),
-    (name, args, id) => {
-        if (name === 'get_weather') {
-            console.log('Tool called:', name, args);
-        }
+    {
+        messages: [
+            { role: 'system', content: 'Ты ИИ помощник.' },
+            { role: 'user', content: 'Расскажи шутку' }
+        ]
+    },
+    (chunk) => {
+        // эта функция вызывается на каждое новое слово от AI
+        output.value += chunk;
     }
 );
 ```
+
+## Установка и Отключение
+
+Загрузите `.zip` файл в окне "Моды" (кнопка на верхней панели). Там же вы увидите красивую плитку с вашим `icon.png` и описанием. С помощью переключателя можно легко выключать и включать мод (в большинстве случаев для применения эффекта выключения потребуется обновить страницу).
