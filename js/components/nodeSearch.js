@@ -11,10 +11,13 @@ export function initNodeSearch() {
         display: none; position: absolute; z-index: 2500;
         background: var(--panel-bg); backdrop-filter: blur(10px);
         border: 1px solid var(--panel-border); border-radius: 8px;
-        width: 200px; max-height: 300px; overflow-y: auto;
+        width: 200px; max-height: 300px; overflow-y: auto; overscroll-behavior: contain;
         box-shadow: 0 8px 32px var(--node-shadow);
-        flex-direction: column; padding: 4px;
+        flex-direction: column; padding: 4px; pointer-events: auto;
     `;
+
+    // Explicitly stop wheel events from propagating to the workspace canvas to ensure scrolling works smoothly
+    searchMenu.addEventListener('wheel', (e) => e.stopPropagation(), { passive: true });
 
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
@@ -42,9 +45,47 @@ export function initNodeSearch() {
         const types = getAllNodeTypes();
         const lowerFilter = filter.toLowerCase();
 
-        // Group by category
+        // Helper to render an item
+        const createItem = (t) => {
+            const item = document.createElement('div');
+            item.className = 'menu-item';
+            item.style.cssText = `
+                padding: 6px 8px; font-size: 13px; color: var(--text-main);
+                cursor: pointer; border-radius: 4px; transition: background 0.1s;
+            `;
+            item.textContent = t.title;
+            item.addEventListener('mouseover', () => item.style.background = 'var(--btn-hover)');
+            item.addEventListener('mouseout', () => item.style.background = 'transparent');
+
+            item.addEventListener('click', () => {
+                const wPos = screenToWorld(lastX, lastY);
+                const newNodeId = createNode(wPos.x, wPos.y, t.typeName);
+
+                if (pendingEdge) {
+                    const edgeData = { ...pendingEdge };
+                    import('./edge.js').then(m => {
+                        m.createEdge(edgeData.startNodeId, edgeData.startType, newNodeId, edgeData.targetType);
+                    });
+                }
+                closeMenu();
+            });
+            return item;
+        };
+
+        // Extract "text" node to put it at the very top (Basic Note)
+        const textNodeDef = types.find(t => t.typeName === 'text');
+        if (textNodeDef && (textNodeDef.title.toLowerCase().includes(lowerFilter) || lowerFilter === '')) {
+            listContainer.appendChild(createItem(textNodeDef));
+
+            const divider = document.createElement('div');
+            divider.style.cssText = 'height:1px; background:var(--node-border); margin:4px 0;';
+            listContainer.appendChild(divider);
+        }
+
+        // Group the rest by category
         const groups = {};
         types.forEach(t => {
+            if (t.typeName === 'text') return; // already handled
             if (t.title.toLowerCase().includes(lowerFilter) || t.category?.toLowerCase().includes(lowerFilter)) {
                 const cat = t.category || 'Other';
                 if (!groups[cat]) groups[cat] = [];
@@ -59,29 +100,7 @@ export function initNodeSearch() {
             listContainer.appendChild(catLabel);
 
             groups[cat].forEach(t => {
-                const item = document.createElement('div');
-                item.style.cssText = `
-                    padding: 6px 8px; font-size: 13px; color: var(--text-main);
-                    cursor: pointer; border-radius: 4px; transition: background 0.1s;
-                `;
-                item.textContent = t.title;
-                item.addEventListener('mouseover', () => item.style.background = 'var(--btn-hover)');
-                item.addEventListener('mouseout', () => item.style.background = 'transparent');
-
-                item.addEventListener('click', () => {
-                    const wPos = screenToWorld(lastX, lastY);
-                    const newNodeId = createNode(wPos.x, wPos.y, t.typeName);
-
-                    if (pendingEdge) {
-                        const edgeData = { ...pendingEdge };
-                        import('./edge.js').then(m => {
-                            m.createEdge(edgeData.startNodeId, edgeData.startType, newNodeId, edgeData.targetType);
-                        });
-                    }
-
-                    closeMenu();
-                });
-                listContainer.appendChild(item);
+                listContainer.appendChild(createItem(t));
             });
         });
     };
