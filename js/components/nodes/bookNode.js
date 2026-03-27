@@ -220,11 +220,52 @@ export function initBookNode() {
             statusEl.style.cssText = 'font-size:11px;color:var(--text-muted);min-height:16px;text-align:center;';
             ui.appendChild(statusEl);
 
-            // ── Run button ─────────────────────────────────────────────────────────
+            // ── Run & Download Buttons ─────────────────────────────────────────────
+            const btnsRow = document.createElement('div');
+            btnsRow.style.cssText = 'display:flex;gap:8px;';
+
             const runBtn = document.createElement('button');
             runBtn.textContent = '📖 Написать книгу';
-            runBtn.style.cssText = `background:var(--text-main);color:var(--bg-color);border:none;border-radius:8px;padding:10px;width:100%;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;pointer-events:auto;transition:opacity 0.2s;`;
+            runBtn.style.cssText = `flex:2;background:var(--text-main);color:var(--bg-color);border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;pointer-events:auto;transition:opacity 0.2s;`;
+
+            const pdfBtn = document.createElement('button');
+            pdfBtn.innerHTML = '📥 Скачать PDF';
+            pdfBtn.style.cssText = `flex:1;background:var(--panel-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;pointer-events:auto;transition:all 0.2s;`;
+            pdfBtn.disabled = true;
+            pdfBtn.style.opacity = '0.5';
+
             runBtn.addEventListener('pointerdown', e => e.stopPropagation());
+            pdfBtn.addEventListener('pointerdown', e => e.stopPropagation());
+
+            pdfBtn.addEventListener('click', () => {
+                if (!outputArea.value.trim()) return;
+                statusEl.textContent = '⏳ Формирование PDF...';
+
+                // Convert Markdown to HTML
+                let htmlContent = window.marked ? window.marked.parse(outputArea.value) : `<pre>${outputArea.value}</pre>`;
+
+                const container = document.createElement('div');
+                container.innerHTML = `
+                    <div style="padding: 40px; font-family: 'Times New Roman', serif; line-height: 1.6; color: #000;">
+                        ${htmlContent}
+                    </div>
+                `;
+
+                const opt = {
+                    margin: 10,
+                    filename: 'Моя_Книга.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                window.html2pdf().set(opt).from(container).save().then(() => {
+                    statusEl.textContent = '✅ PDF сохранен!';
+                }).catch(err => {
+                    statusEl.textContent = `❌ Ошибка PDF: ${err.message}`;
+                });
+            });
+
             runBtn.addEventListener('click', async () => {
 
                 // Gather chronological story context
@@ -238,7 +279,19 @@ export function initBookNode() {
                 const endingMap = {happy:'счастливой концовкой',tragic:'трагической концовкой',open:'открытым концом',unexpected:'неожиданной концовкой',bittersweet:'горько-сладкой концовкой',cyclical:'циклической концовкой'};
                 const langMap = {russian:'русском',english:'английском',ukrainian:'украинском',german:'немецком',french:'французском',spanish:'испанском'};
 
-                const systemPrompt = `Ты профессиональный писатель. Напиши произведение строго на ${langMap[outputLang.value]} языке, в жанре ${genreMap[genre.value]}, ${styleMap[writingStyle.value]} стиле. Тон: ${toneMap[tone.value]}. Повествование ${povMap[pov.value]}. Структура: ${narrative.value === 'linear' ? 'линейная' : narrative.value === 'nonlinear' ? 'нелинейная' : narrative.value === 'flashbacks' ? 'с флэшбэками' : narrative.value === 'frame' ? 'обрамляющая' : 'параллельные сюжетные линии'}. Объём: примерно ${wordCount.value} слов, ${pageCount.value} страниц, ${chapterCount.value} глав. Диалоги: ${dialogueLevel.value === 'minimal' ? 'минимальные' : dialogueLevel.value === 'moderate' ? 'умеренные' : 'интенсивные'}. Описания: ${descLevel.value === 'brief' ? 'краткие' : descLevel.value === 'detailed' ? 'подробные' : 'очень детальные'}. Концовка: ${endingMap[ending.value]}.${prologueCheck._cb.checked ? ' Начни с пролога.' : ''}${epilogueCheck._cb.checked ? ' Закончи эпилогом.' : ''} Аудитория: ${audience.value === 'children' ? 'дети 6–12 лет' : audience.value === 'ya' ? 'подростки 12–18 лет' : audience.value === 'adult' ? 'взрослые' : 'все возрасты'}. Тип конфликта: ${conflict.value.replace(/_/g, ' vs ')}. Сеттинг: ${era.value}.${themes.value.trim() ? ` Ключевые темы: ${themes.value.trim()}.` : ''}${protagonist.value.trim() ? ` Главный герой: ${protagonist.value.trim()}.` : ''}${extraInstructions.value.trim() ? ` Дополнительные инструкции: ${extraInstructions.value.trim()}` : ''}`;
+                const systemPrompt = `Ты профессиональный писатель. Напиши готовую книгу строго на ${langMap[outputLang.value]} языке, в жанре ${genreMap[genre.value]}, ${styleMap[writingStyle.value]} стиле.
+
+Тон: ${toneMap[tone.value]}. Повествование ${povMap[pov.value]}. Структура: ${narrative.value === 'linear' ? 'линейная' : narrative.value === 'nonlinear' ? 'нелинейная' : narrative.value === 'flashbacks' ? 'с флэшбэками' : narrative.value === 'frame' ? 'обрамляющая' : 'параллельные сюжетные линии'}.
+Объём: примерно ${wordCount.value} слов, ${pageCount.value} страниц, ${chapterCount.value} глав. Диалоги: ${dialogueLevel.value === 'minimal' ? 'минимальные' : dialogueLevel.value === 'moderate' ? 'умеренные' : 'интенсивные'}. Описания: ${descLevel.value === 'brief' ? 'краткие' : descLevel.value === 'detailed' ? 'подробные' : 'очень детальные'}.
+Концовка: ${endingMap[ending.value]}.${prologueCheck._cb.checked ? ' Начни с пролога.' : ''}${epilogueCheck._cb.checked ? ' Закончи эпилогом.' : ''}
+Аудитория: ${audience.value === 'children' ? 'дети 6–12 лет' : audience.value === 'ya' ? 'подростки 12–18 лет' : audience.value === 'adult' ? 'взрослые' : 'все возрасты'}. Тип конфликта: ${conflict.value.replace(/_/g, ' vs ')}. Сеттинг: ${era.value}.${themes.value.trim() ? ` Ключевые темы: ${themes.value.trim()}.` : ''}${protagonist.value.trim() ? ` Главный герой: ${protagonist.value.trim()}.` : ''}${extraInstructions.value.trim() ? ` Дополнительные инструкции: ${extraInstructions.value.trim()}` : ''}
+
+ОБЯЗАТЕЛЬНЫЕ ПРАВИЛА ОФОРМЛЕНИЯ КНИГИ (Используй Markdown):
+1. Начни с заголовка книги (используй #).
+2. Обязательно добавь Оглавление (Table of Contents) перед началом глав (используй ## Оглавление и списки).
+3. Каждую главу выделяй заголовком уровня ## (например, ## Глава 1: Таинственный лес).
+4. Разделяй абзацы пустой строкой.
+5. Пиши цельный, художественный текст, готовый к публикации.`;
 
                 const userPrompt = inputNotes
                     ? `На основе следующих заметок напиши книгу:\n\n${inputNotes}`
@@ -249,6 +302,8 @@ export function initBookNode() {
                 statusEl.textContent = '⏳ Генерация... (может занять несколько минут для больших текстов)';
 
                 try {
+                    pdfBtn.disabled = true;
+                    pdfBtn.style.opacity = '0.5';
                     const temperature = tempMap[creativity.value] ?? 0.8;
 
                     await streamCompletion(
@@ -271,6 +326,9 @@ export function initBookNode() {
                     statusEl.textContent = `✅ Готово! ${finalWords} слов`;
                     defaultTextarea.value = outputArea.value;
 
+                    pdfBtn.disabled = false;
+                    pdfBtn.style.opacity = '1';
+
                 } catch (err) {
                     outputArea.value = '';
                     statusEl.textContent = `❌ ${err.message}`;
@@ -278,7 +336,10 @@ export function initBookNode() {
                     runBtn.disabled = false;
                 }
             });
-            ui.appendChild(runBtn);
+
+            btnsRow.appendChild(runBtn);
+            btnsRow.appendChild(pdfBtn);
+            ui.appendChild(btnsRow);
 
             body.appendChild(ui);
         }

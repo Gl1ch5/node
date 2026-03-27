@@ -309,7 +309,7 @@ export function initPanelManager() {
                     modelSelect.appendChild(opt);
                 });
             } else {
-                modelSelect.innerHTML = '<option value="llama3-8b-8192">llama3-8b-8192 (Default)</option>';
+                modelSelect.innerHTML = '<option value="llama3-8b-8192">llama3-8b-8192 (Default)</option><option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>';
             }
         });
         // Trigger initial state

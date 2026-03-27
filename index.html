@@ -6,6 +6,8 @@
     <title>NodeNotes</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/marked.min.js"></script>
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -87,6 +89,7 @@
 
             <select id="lab-model-select" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
                 <option value="llama3-8b-8192">llama3-8b-8192 (Default)</option>
+                <option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>
             </select>
             <button id="btn-fetch-models" class="panel-btn" style="width:100%;justify-content:center;background:var(--text-main);color:var(--bg-color);padding:8px;font-size:11px;">Загрузить Модели</button>
         </div>
