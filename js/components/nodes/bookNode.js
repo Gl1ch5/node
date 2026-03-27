@@ -1,6 +1,7 @@
 import { registerNodeType } from '../../core/nodeRegistry.js';
 import { streamCompletion } from '../../core/aiUtils.js';
 import { state } from '../../core/state.js';
+import { gatherStoryContext } from '../../core/storyLogic.js';
 
 export function initBookNode() {
     registerNodeType('book_generator', {

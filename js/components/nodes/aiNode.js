@@ -1,6 +1,7 @@
 import { registerNodeType } from '../../core/nodeRegistry.js';
 import { streamCompletion } from '../../core/aiUtils.js';
 import { state } from '../../core/state.js';
+import { gatherStoryContext } from '../../core/storyLogic.js';
 
 export function initAiNode() {
     registerNodeType('ai_node', {
@@ -51,32 +52,11 @@ export function initAiNode() {
                     return;
                 }
 
-                // Gather input context
-                const incomingEdges = state.edges.filter(e => e.toNode === id && e.toType === 'in');
-                let inputContext = '';
-
-                let visited = new Set();
-                let chain = [];
-                const traverse = (nodeId) => {
-                    if (visited.has(nodeId)) return;
-                    visited.add(nodeId);
-                    const parentEdges = state.edges.filter(e => e.toNode === nodeId && e.toType === 'in');
-                    parentEdges.forEach(pe => traverse(pe.fromNode));
-                    const target = state.nodes[nodeId];
-                    if (target) {
-                        const title = target.el.querySelector('.node-title').value;
-                        const text = target.el.querySelector('.node-textarea')?.value || target.el.querySelector('textarea:not([readonly])')?.value || '';
-                        if (text.trim() || title !== 'Заметка') {
-                            chain.push({ title, text });
-                        }
-                    }
-                };
-
-                incomingEdges.forEach(edge => traverse(edge.fromNode));
-                chain.forEach(ch => { inputContext += `[${ch.title}]:\n${ch.text}\n\n`; });
+                // Gather chronological story context
+                const inputContext = gatherStoryContext(id);
 
                 const finalPrompt = inputContext
-                    ? `Контекст (заметки и связи):\n${inputContext}\n\nЗадание: ${prompt}`
+                    ? `${inputContext}\n\nЗадание: ${prompt}`
                     : `Задание: ${prompt}`;
 
                 generateBtn.disabled = true;

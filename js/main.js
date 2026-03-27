@@ -9,6 +9,8 @@ import { initTextNode } from './components/nodes/textNode.js';
 import { initAiNode } from './components/nodes/aiNode.js';
 import { initExportNode } from './components/nodes/exportNode.js';
 import { initBookNode } from './components/nodes/bookNode.js';
+import { initRpgNodes } from './components/nodes/rpgNodes.js';
+import { initAiToolsNodes } from './components/nodes/aiToolsNodes.js';
 import { renderEdges } from './components/edge.js';
 import { complete, streamCompletion, getApiKey, getModel, getProvider } from './core/aiUtils.js';
 import { registerNodeType } from './core/nodeRegistry.js';
@@ -23,6 +25,8 @@ function init() {
     initAiNode();
     initExportNode();
     initBookNode();
+    initRpgNodes();
+    initAiToolsNodes();
 
     // Init Mods
     const api = {
