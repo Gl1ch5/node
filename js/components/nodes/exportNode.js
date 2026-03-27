@@ -38,27 +38,85 @@ export function initExportNode() {
                 let visited = new Set();
                 let chain = [];
 
-                // Рекурсивный обход всех предков
-                const traverse = (nodeId) => {
-                    if (visited.has(nodeId)) return;
-                    visited.add(nodeId);
+                // Helper to extract text from a node (similar to storyLogic.js)
+                const extractNodeText = (targetNode) => {
+                    if (!targetNode || !targetNode.el) return { title: 'Unknown', text: '' };
 
-                    // Сначала обходим все входящие связи (ищем предков)
-                    const parentEdges = state.edges.filter(e => e.toNode === nodeId && e.toType === 'in');
-                    parentEdges.forEach(pe => traverse(pe.fromNode));
+                    const titleEl = targetNode.el.querySelector('.node-title');
+                    const title = titleEl ? titleEl.value : 'Заметка';
 
-                    // Затем добавляем саму ноду (таким образом порядок будет от начала к концу)
-                    const target = state.nodes[nodeId];
-                    if (target) {
-                        const title = target.el.querySelector('.node-title').value;
-                        const text = target.el.querySelector('.node-textarea').value;
-                        if (text.trim() || title !== 'Заметка') {
-                            chain.push({ title, text });
-                        }
+                    let text = '';
+                    const defaultTextarea = targetNode.el.querySelector('.node-textarea');
+                    if (defaultTextarea && defaultTextarea.style.display !== 'none') {
+                        text = defaultTextarea.value;
+                    } else {
+                        const inputs = targetNode.el.querySelectorAll('.node-body input:not([type="checkbox"]):not(.node-title), .node-body textarea:not([readonly])');
+                        let parts = [];
+                        inputs.forEach(inp => {
+                            if (inp.value && inp.value.trim()) {
+                                const label = inp.placeholder ? `${inp.placeholder}: ` : '';
+                                parts.push(`${label}${inp.value}`);
+                            }
+                        });
+                        text = parts.join('\n');
                     }
+                    return { title, text: text.trim() };
                 };
 
-                incomingEdges.forEach(edge => traverse(edge.fromNode));
+                // Trace the main spine backwards and collect top/bottom side contexts
+                const gatherChronologicalChain = (startNodeId) => {
+                    let storyline = [];
+                    let currentNodeId = startNodeId;
+
+                    while (currentNodeId) {
+                        if (visited.has(currentNodeId)) break;
+                        visited.add(currentNodeId);
+
+                        const node = state.nodes[currentNodeId];
+                        if (!node) break;
+
+                        let currentStep = { main: extractNodeText(node), context: [] };
+
+                        // Find side connections to this specific node (Top / Bottom)
+                        const sideEdges = state.edges.filter(e =>
+                            (e.toNode === currentNodeId && (e.toType === 'top' || e.toType === 'bottom')) ||
+                            (e.fromNode === currentNodeId && (e.fromType === 'top' || e.fromType === 'bottom'))
+                        );
+
+                        sideEdges.forEach(e => {
+                            const otherId = e.fromNode === currentNodeId ? e.toNode : e.fromNode;
+                            if (!visited.has(otherId) && state.nodes[otherId]) {
+                                visited.add(otherId);
+                                currentStep.context.push(extractNodeText(state.nodes[otherId]));
+                            }
+                        });
+
+                        storyline.unshift(currentStep);
+
+                        // Find the previous node in the main spine
+                        const prevEdge = state.edges.find(e => e.toNode === currentNodeId && e.toType === 'in');
+                        if (prevEdge) {
+                            currentNodeId = prevEdge.fromNode;
+                        } else {
+                            break;
+                        }
+                    }
+                    return storyline;
+                };
+
+                incomingEdges.forEach(edge => {
+                    const branchStoryline = gatherChronologicalChain(edge.fromNode);
+                    branchStoryline.forEach(step => {
+                        if (step.main.text.trim() || step.main.title !== 'Заметка') {
+                            chain.push(step.main);
+                        }
+                        step.context.forEach(ctx => {
+                            if (ctx.text.trim() || ctx.title !== 'Заметка') {
+                                chain.push(ctx);
+                            }
+                        });
+                    });
+                });
 
                 chain.forEach(ch => {
                     content += `### ${ch.title}\n\n${ch.text}\n\n`;
