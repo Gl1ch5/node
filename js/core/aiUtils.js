@@ -12,44 +12,64 @@ export function getProvider() {
 }
 
 export function getApiKey(provider = getProvider()) {
-    if (provider === 'deepseek') {
-        const el = document.getElementById('lab-deepseek-key');
-        if (el && el.value.trim()) { localStorage.setItem('nn_deepseek_key', el.value.trim()); return el.value.trim(); }
-        return localStorage.getItem('nn_deepseek_key') || '';
-    }
-    const el = document.getElementById('lab-api-key');
-    if (el && el.value.trim()) { localStorage.setItem('nn_groq_key', el.value.trim()); return el.value.trim(); }
-    return localStorage.getItem('nn_groq_key') || '';
-}
+    let keyName = `nn_${provider}_key`;
+    let elId = `lab-${provider === 'groq' ? 'api' : provider}-key`;
 
-export function useProxy() {
-    const el = document.getElementById('lab-use-proxy');
+    const el = document.getElementById(elId);
     if (el) {
-        // save state to avoid losing it on reload
-        const isChecked = el.checked;
-        localStorage.setItem('nn_use_proxy', isChecked ? 'true' : 'false');
-        return isChecked;
+        // Always save whatever is in the input, even if it's empty
+        localStorage.setItem(keyName, el.value.trim());
+        return el.value.trim();
     }
-    return localStorage.getItem('nn_use_proxy') === 'true';
+    return localStorage.getItem(keyName) || '';
 }
 
-// Ensure the UI element matches the saved state on load (handled implicitly here, but ideally should be set on init)
+export function getCustomUrl() {
+    const el = document.getElementById('lab-custom-url');
+    if (el) {
+        // Always save whatever is in the input, even if it's empty
+        localStorage.setItem('nn_custom_url', el.value.trim());
+        return el.value.trim();
+    }
+    return localStorage.getItem('nn_custom_url') || '';
+}
+
+// UI listener logic (runs after DOM load)
 document.addEventListener('DOMContentLoaded', () => {
-    const el = document.getElementById('lab-use-proxy');
-    if (el) el.checked = localStorage.getItem('nn_use_proxy') === 'true';
+    const customUrlEl = document.getElementById('lab-custom-url');
+    if (customUrlEl) customUrlEl.value = localStorage.getItem('nn_custom_url') || '';
+
+    const providerSelect = document.getElementById('lab-provider-select');
+    if (providerSelect) {
+        const updateProviderUI = () => {
+            const val = providerSelect.value;
+            ['groq', 'deepseek', 'openai', 'openrouter', 'proxyapi'].forEach(p => {
+                const sec = document.getElementById(`lab-${p === 'groq' ? 'groq' : p}-section`);
+                if (sec) sec.style.display = p === val ? 'flex' : 'none';
+            });
+        };
+
+        providerSelect.addEventListener('change', updateProviderUI);
+
+        // Ensure UI is in sync on load
+        updateProviderUI();
+    }
 });
 
 export function getBaseUrl(provider = getProvider()) {
-    const rawUrl = provider === 'deepseek'
-        ? 'https://api.deepseek.com/v1'
-        : 'https://api.groq.com/openai/v1';
-
-    if (useProxy()) {
-        // corsproxy.io allows routing requests bypassing CORS and country blocks.
-        // Another option is allorigins, but corsproxy passes headers nicely.
-        return `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`;
+    const customUrl = getCustomUrl();
+    if (customUrl) {
+        // Automatically strip trailing slashes
+        return customUrl.replace(/\/+$/, '');
     }
-    return rawUrl;
+
+    if (provider === 'deepseek') return 'https://api.deepseek.com/v1';
+    if (provider === 'openai') return 'https://api.openai.com/v1';
+    if (provider === 'openrouter') return 'https://openrouter.ai/api/v1';
+    if (provider === 'proxyapi') return 'https://api.proxyapi.ru/openai/v1';
+
+    // Default Groq
+    return 'https://api.groq.com/openai/v1';
 }
 
 export function getHeaders(provider = getProvider()) {
@@ -58,14 +78,23 @@ export function getHeaders(provider = getProvider()) {
         'Authorization': `Bearer ${getApiKey(provider)}`
     };
 
-    // corsproxy.io requires x-requested-with sometimes, but groq handles authorization in header
+    if (provider === 'openrouter' || getBaseUrl(provider).includes('openrouter.ai')) {
+        headers['HTTP-Referer'] = window.location.href;
+        headers['X-Title'] = 'NodeNotes';
+    }
+
     return headers;
 }
 
 export function getModel(provider = getProvider()) {
     const el = document.getElementById('lab-model-select');
     if (el && el.value) return el.value;
-    return provider === 'deepseek' ? 'deepseek-chat' : 'llama3-8b-8192';
+
+    if (provider === 'deepseek') return 'deepseek-chat';
+    if (provider === 'openai') return 'gpt-4o-mini';
+    if (provider === 'openrouter') return 'openai/gpt-4o-mini';
+
+    return 'llama3-8b-8192'; // Groq default
 }
 
 // ── Streaming Completion (SSE) ────────────────────────────────────────────────

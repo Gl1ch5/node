@@ -272,17 +272,11 @@ export function createNode(worldX, worldY, typeName = 'text') {
                         formData.append('file', audioBlob, 'audio.webm');
                         formData.append('model', 'whisper-large-v3');
 
-                        // Use aiUtils.getBaseUrl() which handles the proxy wrapper
+                        // Use aiUtils.getBaseUrl() which now correctly returns custom url if specified
                         let baseUrl = aiUtils.getBaseUrl('groq');
-                        // Ensure we hit the audio transcription endpoint correctly.
-                        // getBaseUrl returns something like `https://api.groq.com/openai/v1` or `https://corsproxy.io/?url=...openai/v1`
-                        // We need to append `/audio/transcriptions`.
-                        // If it uses corsproxy.io, appending directly might break the query parameter format,
-                        // so we need to construct it carefully.
-                        let transcriptionUrl = 'https://api.groq.com/openai/v1/audio/transcriptions';
-                        if (aiUtils.useProxy()) {
-                            transcriptionUrl = `https://corsproxy.io/?url=${encodeURIComponent(transcriptionUrl)}`;
-                        }
+
+                        // Append /audio/transcriptions to the base URL
+                        let transcriptionUrl = `${baseUrl}/audio/transcriptions`;
 
                         const response = await fetch(transcriptionUrl, {
                             method: 'POST',

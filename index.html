@@ -109,6 +109,9 @@
             <select id="lab-provider-select" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
                 <option value="groq">Groq</option>
                 <option value="deepseek">DeepSeek</option>
+                <option value="openai">OpenAI</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="proxyapi">ProxyAPI.ru</option>
             </select>
 
             <div id="lab-groq-section" style="display:flex;flex-direction:column;gap:4px;">
@@ -117,15 +120,25 @@
             <div id="lab-deepseek-section" style="display:none;flex-direction:column;gap:4px;">
                 <input type="password" id="lab-deepseek-key" placeholder="DeepSeek API Key (sk-...)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
             </div>
+            <div id="lab-openai-section" style="display:none;flex-direction:column;gap:4px;">
+                <input type="password" id="lab-openai-key" placeholder="OpenAI API Key (sk-...)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
+            </div>
+            <div id="lab-openrouter-section" style="display:none;flex-direction:column;gap:4px;">
+                <input type="password" id="lab-openrouter-key" placeholder="OpenRouter API Key (sk-or-v1-...)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
+            </div>
+            <div id="lab-proxyapi-section" style="display:none;flex-direction:column;gap:4px;">
+                <input type="password" id="lab-proxyapi-key" placeholder="ProxyAPI.ru Key (sk-...)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
+            </div>
 
-            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-main);cursor:pointer;pointer-events:auto;">
-                <input type="checkbox" id="lab-use-proxy" style="pointer-events:auto;cursor:pointer;accent-color:var(--text-main);">
-                🌐 Web Proxy (Обход блокировок РФ)
-            </label>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:10px;color:var(--text-muted);">Кастомный Base URL (если нужен свой прокси/сервер)</label>
+                <input type="text" id="lab-custom-url" placeholder="Например: https://api.proxyapi.ru/openai/v1" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:11px;outline:none;pointer-events:auto;">
+            </div>
 
             <select id="lab-model-select" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
                 <option value="llama3-8b-8192">llama3-8b-8192 (Default)</option>
                 <option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>
+                <option value="gpt-4o-mini">gpt-4o-mini</option>
             </select>
             <button id="btn-fetch-models" class="panel-btn" style="width:100%;justify-content:center;background:var(--text-main);color:var(--bg-color);padding:8px;font-size:11px;">Загрузить Модели</button>
         </div>
