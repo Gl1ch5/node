@@ -56,6 +56,33 @@ export function initTopPanel() {
         document.getElementById('import-file-input').click();
     });
 
+    document.getElementById('btn-clear-all').addEventListener('click', () => {
+        if (confirm("Вы уверены, что хотите удалить все ноды и связи? Это действие нельзя отменить.")) {
+            // Delete all nodes safely
+            const nodeIds = Object.keys(state.nodes);
+            // We need to import deleteNode or just clear state directly.
+            // But it's better to use deleteNode to unobserve resize observers and remove elements properly.
+            // Since we can't easily dynamically import deleteNode here synchronously if it's not at the top,
+            // we will dispatch a custom event or do it manually. Let's do it manually for bulk.
+            import('./node.js').then(module => {
+                nodeIds.forEach(id => {
+                    module.deleteNode(id);
+                });
+
+                // Extra safety
+                state.nodes = {};
+                state.edges = [];
+                state.selectedNodeIds.clear();
+
+                // Re-render empty edges
+                import('./edge.js').then(edgeModule => edgeModule.renderEdges());
+
+                // Trigger save
+                triggerSave();
+            });
+        }
+    });
+
     document.getElementById('import-file-input').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
