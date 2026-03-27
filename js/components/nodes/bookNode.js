@@ -227,28 +227,8 @@ export function initBookNode() {
             runBtn.addEventListener('pointerdown', e => e.stopPropagation());
             runBtn.addEventListener('click', async () => {
 
-                // Gather input notes from connected ancestors
-                let inputNotes = '';
-                const incomingEdges = state.edges.filter(e => e.toNode === id && e.toType === 'in');
-                let visited = new Set();
-                let chain = [];
-
-                const traverse = (nodeId) => {
-                    if (visited.has(nodeId)) return;
-                    visited.add(nodeId);
-                    const parentEdges = state.edges.filter(e => e.toNode === nodeId && e.toType === 'in');
-                    parentEdges.forEach(pe => traverse(pe.fromNode));
-                    const target = state.nodes[nodeId];
-                    if (target) {
-                        const title = target.el.querySelector('.node-title').value;
-                        const text = target.el.querySelector('.node-textarea')?.value || target.el.querySelector('textarea:not([readonly])')?.value || '';
-                        if (text.trim() || title !== 'Заметка') {
-                            chain.push({ title, text });
-                        }
-                    }
-                };
-                incomingEdges.forEach(edge => traverse(edge.fromNode));
-                chain.forEach(ch => { inputNotes += `[${ch.title}]:\n${ch.text}\n\n`; });
+                // Gather chronological story context
+                const inputNotes = gatherStoryContext(id);
 
                 const tempMap = { low: 0.3, medium: 0.8, high: 1.4 };
                 const genreMap = {fantasy:'фэнтези',scifi:'научной фантастике',detective:'детективе',thriller:'триллере',romance:'романтике',horror:'ужасах',historical:'историческом романе',adventure:'приключенческом романе',drama:'драме',literary:'литературной прозе',mystery:'мистике',dystopia:'антиутопии'};
