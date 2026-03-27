@@ -6,6 +6,8 @@
     <title>NodeNotes</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/marked.min.js"></script>
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -39,6 +41,11 @@
             <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
             Тема
         </button>
+        <button class="panel-btn" id="btn-import" title="Загрузить файл">
+            <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+            Импорт
+        </button>
+        <input type="file" id="import-file-input" accept=".json" style="display:none;">
         <button class="panel-btn" id="btn-export" title="Сохранить файл">
             <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
             Экспорт
@@ -82,6 +89,7 @@
 
             <select id="lab-model-select" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
                 <option value="llama3-8b-8192">llama3-8b-8192 (Default)</option>
+                <option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>
             </select>
             <button id="btn-fetch-models" class="panel-btn" style="width:100%;justify-content:center;background:var(--text-main);color:var(--bg-color);padding:8px;font-size:11px;">Загрузить Модели</button>
         </div>

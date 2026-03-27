@@ -5,12 +5,21 @@
         width: 95%;
         padding: 4px;
         gap: 2px;
-        justify-content: space-between;
+        justify-content: flex-start;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+    }
+
+    #top-panel::-webkit-scrollbar {
+        height: 0px;
+        display: none;
     }
 
     .panel-btn {
         padding: 6px 8px;
         font-size: 11px;
+        white-space: nowrap;
     }
 
     .panel-btn svg {
@@ -20,28 +29,16 @@
 
     .panel-divider {
         margin: 2px 0;
+        flex-shrink: 0;
     }
 
-    #mode-text {
-        display: none; /* Прячем текст на мобильных, оставляем иконку */
-    }
-
-    .lab-dashboard {
-        width: 95%;
-        padding: 20px;
-        gap: 15px;
-    }
-
-    .lab-dashboard-header {
-        font-size: 20px;
-    }
-
-    .lab-module-title {
-        font-size: 16px;
-    }
-
-    .lab-module-desc {
-        font-size: 12px;
+    #settings-panel {
+        width: 95% !important;
+        right: 50% !important;
+        transform: translateX(50%) !important;
+        top: 60px !important;
+        max-height: calc(100vh - 80px) !important;
+        padding: 10px !important;
     }
 
     .node {

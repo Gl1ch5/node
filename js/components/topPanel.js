@@ -1,6 +1,7 @@
 import { state } from '../core/state.js';
 import { updateTransform, drawGrid } from '../core/workspace.js';
 import { groupSelectedNodes } from './node.js';
+import { applySnapshot, triggerSave } from '../core/persistence.js';
 
 export function initTopPanel() {
 
@@ -51,13 +52,56 @@ export function initTopPanel() {
         setTimeout(() => drawGrid(), 50);
     });
 
+    document.getElementById('btn-import').addEventListener('click', () => {
+        document.getElementById('import-file-input').click();
+    });
+
+    document.getElementById('import-file-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const data = JSON.parse(evt.target.result);
+                if (!data.nodes) throw new Error('Invalid file format');
+                await applySnapshot(data);
+
+                // Show toast via custom event or global dispatch if needed, but applySnapshot manages it visually
+            } catch (err) {
+                alert(`Import error: ${err.message}`);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = ''; // Reset input
+    });
+
     document.getElementById('btn-export').addEventListener('click', () => {
+        // We can just rely on the existing persistence logic to build the JSON
+        // but we need to do it without modifying the localStorage cache directly here.
+        // It's cleaner to reuse the serialise logic from persistence, but since
+        // it's not exported, we replicate the updated node serialization here for export.
         const exportData = {
-            nodes: Object.entries(state.nodes).map(([id, n]) => ({
-                id, x: Math.round(n.x), y: Math.round(n.y),
-                title: n.el.querySelector('.node-title').value,
-                text: n.el.querySelector('.node-textarea').value
-            })),
+            nodes: Object.entries(state.nodes).map(([id, n]) => {
+                const nodeData = {
+                    id, x: Math.round(n.x), y: Math.round(n.y),
+                    type: n.type || 'text',
+                    title: n.el.querySelector('.node-title')?.value || '',
+                    customFields: {}
+                };
+                const body = n.el.querySelector('.node-body');
+                if (body) {
+                    const inputs = body.querySelectorAll('input, textarea, select');
+                    inputs.forEach((input, index) => {
+                        if (input.type === 'checkbox') {
+                            nodeData.customFields[index] = input.checked;
+                        } else {
+                            nodeData.customFields[index] = input.value;
+                        }
+                    });
+                }
+                return nodeData;
+            }),
             edges: state.edges,
             transform: { ...state.transform }
         };

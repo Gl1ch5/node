@@ -1,6 +1,7 @@
 import { registerNodeType } from '../../core/nodeRegistry.js';
 import { streamCompletion } from '../../core/aiUtils.js';
 import { state } from '../../core/state.js';
+import { gatherStoryContext } from '../../core/storyLogic.js';
 
 export function initBookNode() {
     registerNodeType('book_generator', {
@@ -54,13 +55,35 @@ export function initBookNode() {
                 t.addEventListener('pointerdown', e => e.stopPropagation());
                 return t;
             };
-            const section = (label) => {
+            const section = (label, isToggleable = true) => {
                 const d = document.createElement('div');
                 d.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+
+                const header = document.createElement('div');
+                header.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+                let cb = null;
+                if (isToggleable) {
+                    cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.checked = true; // default active
+                    cb.style.cssText = 'pointer-events:auto;cursor:pointer;width:12px;height:12px;accent-color:var(--text-main);margin:0;';
+                    cb.addEventListener('pointerdown', e => e.stopPropagation());
+                    header.appendChild(cb);
+                }
+
                 const l = document.createElement('label');
-                l.style.cssText = 'font-size:11px;color:var(--text-muted);font-weight:500;';
+                l.style.cssText = 'font-size:11px;color:var(--text-muted);font-weight:500;cursor:pointer;';
                 l.textContent = label;
-                d.appendChild(l);
+                if (cb) {
+                    l.addEventListener('click', () => { cb.checked = !cb.checked; });
+                }
+                header.appendChild(l);
+
+                d.appendChild(header);
+
+                // Expose checkbox so we can read it later
+                d._toggleCb = cb;
                 return d;
             };
             const row2 = (...els) => {
@@ -78,6 +101,13 @@ export function initBookNode() {
             // ── Build UI ─────────────────────────────────────────────────────────
             const ui = document.createElement('div');
             ui.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+
+            // 0. Custom Prompt (topmost)
+            const customPromptWrap = section('✨ Кастомный промпт (задание)', true);
+            const customPrompt = mkTextarea('Укажите особое задание или переопределите системный промпт...', 3);
+            customPromptWrap.appendChild(customPrompt);
+            ui.appendChild(customPromptWrap);
+            ui.appendChild(divider());
 
             // 1. Genre
             const genreWrap = section('📚 Жанр'); const genre = mkSel([
@@ -219,35 +249,56 @@ export function initBookNode() {
             statusEl.style.cssText = 'font-size:11px;color:var(--text-muted);min-height:16px;text-align:center;';
             ui.appendChild(statusEl);
 
-            // ── Run button ─────────────────────────────────────────────────────────
+            // ── Run & Download Buttons ─────────────────────────────────────────────
+            const btnsRow = document.createElement('div');
+            btnsRow.style.cssText = 'display:flex;gap:8px;';
+
             const runBtn = document.createElement('button');
             runBtn.textContent = '📖 Написать книгу';
-            runBtn.style.cssText = `background:var(--text-main);color:var(--bg-color);border:none;border-radius:8px;padding:10px;width:100%;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;pointer-events:auto;transition:opacity 0.2s;`;
+            runBtn.style.cssText = `flex:2;background:var(--text-main);color:var(--bg-color);border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;pointer-events:auto;transition:opacity 0.2s;`;
+
+            const pdfBtn = document.createElement('button');
+            pdfBtn.innerHTML = '📥 Скачать PDF';
+            pdfBtn.style.cssText = `flex:1;background:var(--panel-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;pointer-events:auto;transition:all 0.2s;`;
+            pdfBtn.disabled = true;
+            pdfBtn.style.opacity = '0.5';
+
             runBtn.addEventListener('pointerdown', e => e.stopPropagation());
+            pdfBtn.addEventListener('pointerdown', e => e.stopPropagation());
+
+            pdfBtn.addEventListener('click', () => {
+                if (!outputArea.value.trim()) return;
+                statusEl.textContent = '⏳ Формирование PDF...';
+
+                // Convert Markdown to HTML
+                let htmlContent = window.marked ? window.marked.parse(outputArea.value) : `<pre>${outputArea.value}</pre>`;
+
+                const container = document.createElement('div');
+                container.innerHTML = `
+                    <div style="padding: 40px; font-family: 'Times New Roman', serif; line-height: 1.6; color: #000;">
+                        ${htmlContent}
+                    </div>
+                `;
+
+                const opt = {
+                    margin: 10,
+                    filename: 'Моя_Книга.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                window.html2pdf().set(opt).from(container).save().then(() => {
+                    statusEl.textContent = '✅ PDF сохранен!';
+                }).catch(err => {
+                    statusEl.textContent = `❌ Ошибка PDF: ${err.message}`;
+                });
+            });
+
             runBtn.addEventListener('click', async () => {
 
-                // Gather input notes from connected ancestors
-                let inputNotes = '';
-                const incomingEdges = state.edges.filter(e => e.toNode === id && e.toType === 'in');
-                let visited = new Set();
-                let chain = [];
-
-                const traverse = (nodeId) => {
-                    if (visited.has(nodeId)) return;
-                    visited.add(nodeId);
-                    const parentEdges = state.edges.filter(e => e.toNode === nodeId && e.toType === 'in');
-                    parentEdges.forEach(pe => traverse(pe.fromNode));
-                    const target = state.nodes[nodeId];
-                    if (target) {
-                        const title = target.el.querySelector('.node-title').value;
-                        const text = target.el.querySelector('.node-textarea')?.value || target.el.querySelector('textarea:not([readonly])')?.value || '';
-                        if (text.trim() || title !== 'Заметка') {
-                            chain.push({ title, text });
-                        }
-                    }
-                };
-                incomingEdges.forEach(edge => traverse(edge.fromNode));
-                chain.forEach(ch => { inputNotes += `[${ch.title}]:\n${ch.text}\n\n`; });
+                // Gather chronological story context
+                const inputNotes = gatherStoryContext(id);
 
                 const tempMap = { low: 0.3, medium: 0.8, high: 1.4 };
                 const genreMap = {fantasy:'фэнтези',scifi:'научной фантастике',detective:'детективе',thriller:'триллере',romance:'романтике',horror:'ужасах',historical:'историческом романе',adventure:'приключенческом романе',drama:'драме',literary:'литературной прозе',mystery:'мистике',dystopia:'антиутопии'};
@@ -257,17 +308,71 @@ export function initBookNode() {
                 const endingMap = {happy:'счастливой концовкой',tragic:'трагической концовкой',open:'открытым концом',unexpected:'неожиданной концовкой',bittersweet:'горько-сладкой концовкой',cyclical:'циклической концовкой'};
                 const langMap = {russian:'русском',english:'английском',ukrainian:'украинском',german:'немецком',french:'французском',spanish:'испанском'};
 
-                const systemPrompt = `Ты профессиональный писатель. Напиши произведение строго на ${langMap[outputLang.value]} языке, в жанре ${genreMap[genre.value]}, ${styleMap[writingStyle.value]} стиле. Тон: ${toneMap[tone.value]}. Повествование ${povMap[pov.value]}. Структура: ${narrative.value === 'linear' ? 'линейная' : narrative.value === 'nonlinear' ? 'нелинейная' : narrative.value === 'flashbacks' ? 'с флэшбэками' : narrative.value === 'frame' ? 'обрамляющая' : 'параллельные сюжетные линии'}. Объём: примерно ${wordCount.value} слов, ${pageCount.value} страниц, ${chapterCount.value} глав. Диалоги: ${dialogueLevel.value === 'minimal' ? 'минимальные' : dialogueLevel.value === 'moderate' ? 'умеренные' : 'интенсивные'}. Описания: ${descLevel.value === 'brief' ? 'краткие' : descLevel.value === 'detailed' ? 'подробные' : 'очень детальные'}. Концовка: ${endingMap[ending.value]}.${prologueCheck._cb.checked ? ' Начни с пролога.' : ''}${epilogueCheck._cb.checked ? ' Закончи эпилогом.' : ''} Аудитория: ${audience.value === 'children' ? 'дети 6–12 лет' : audience.value === 'ya' ? 'подростки 12–18 лет' : audience.value === 'adult' ? 'взрослые' : 'все возрасты'}. Тип конфликта: ${conflict.value.replace(/_/g, ' vs ')}. Сеттинг: ${era.value}.${themes.value.trim() ? ` Ключевые темы: ${themes.value.trim()}.` : ''}${protagonist.value.trim() ? ` Главный герой: ${protagonist.value.trim()}.` : ''}${extraInstructions.value.trim() ? ` Дополнительные инструкции: ${extraInstructions.value.trim()}` : ''}`;
+                const checkState = (wrap) => wrap._toggleCb ? wrap._toggleCb.checked : false;
+
+                let sysParts = [];
+                if (checkState(customPromptWrap) && customPrompt.value.trim()) {
+                    sysParts.push(`ЗАДАНИЕ: ${customPrompt.value.trim()}`);
+                }
+
+                let baseInstr = 'Ты профессиональный писатель. Напиши готовую книгу';
+                if (checkState(langWrap)) baseInstr += ` строго на ${langMap[outputLang.value]} языке`;
+                if (checkState(genreWrap)) baseInstr += `, в жанре ${genreMap[genre.value]}`;
+                if (checkState(styleWrap)) baseInstr += `, в ${styleMap[writingStyle.value]} стиле`;
+                sysParts.push(baseInstr + '.');
+
+                let details = [];
+                if (checkState(toneWrap)) details.push(`Тон: ${toneMap[tone.value]}`);
+                if (checkState(povWrap)) details.push(`Повествование: ${povMap[pov.value]}`);
+                if (checkState(narrWrap)) {
+                    const nMap = {linear:'линейная',nonlinear:'нелинейная',flashbacks:'с флэшбэками',frame:'обрамляющая',parallel:'параллельные сюжетные линии'};
+                    details.push(`Структура: ${nMap[narrative.value]}`);
+                }
+                if (checkState(wordsWrap)) details.push(`Примерно ${wordCount.value} слов`);
+                if (checkState(pagesWrap)) details.push(`~${pageCount.value} страниц`);
+                if (checkState(chapWrap)) details.push(`${chapterCount.value} глав`);
+                if (checkState(dialWrap)) {
+                    const dMap = {minimal:'минимальные',moderate:'умеренные',heavy:'интенсивные'};
+                    details.push(`Диалоги: ${dMap[dialogueLevel.value]}`);
+                }
+                if (checkState(descWrap)) {
+                    const dsMap = {brief:'краткие',detailed:'подробные',very_detailed:'очень детальные'};
+                    details.push(`Описания: ${dsMap[descLevel.value]}`);
+                }
+                if (checkState(endingWrap)) details.push(`Концовка: ${endingMap[ending.value]}`);
+                if (prologueCheck._cb.checked) details.push(`Начни с пролога`);
+                if (epilogueCheck._cb.checked) details.push(`Закончи эпилогом`);
+                if (checkState(audWrap)) {
+                    const aMap = {children:'дети 6-12 лет',ya:'подростки 12-18 лет',adult:'взрослые',all:'все возрасты'};
+                    details.push(`Аудитория: ${aMap[audience.value]}`);
+                }
+                if (checkState(conflWrap)) details.push(`Конфликт: ${conflict.value.replace(/_/g, ' vs ')}`);
+                if (checkState(eraWrap)) details.push(`Сеттинг: ${era.value}`);
+
+                if (details.length > 0) sysParts.push(details.join('. ') + '.');
+
+                if (checkState(themesWrap) && themes.value.trim()) sysParts.push(`Ключевые темы: ${themes.value.trim()}`);
+                if (checkState(protWrap) && protagonist.value.trim()) sysParts.push(`Главный герой: ${protagonist.value.trim()}`);
+                if (checkState(extraWrap) && extraInstructions.value.trim()) sysParts.push(`Дополнительные инструкции: ${extraInstructions.value.trim()}`);
+
+                const systemPrompt = sysParts.join('\n') + `\n\nОБЯЗАТЕЛЬНЫЕ ПРАВИЛА ОФОРМЛЕНИЯ КНИГИ (Используй Markdown):
+1. Начни с заголовка книги (используй #).
+2. Обязательно добавь Оглавление (Table of Contents) перед началом глав (используй ## Оглавление и списки).
+3. Каждую главу выделяй заголовком уровня ## (например, ## Глава 1: Таинственный лес).
+4. Разделяй абзацы пустой строкой.
+5. Пиши цельный, художественный текст, готовый к публикации.`;
 
                 const userPrompt = inputNotes
-                    ? `На основе следующих заметок напиши книгу:\n\n${inputNotes}`
-                    : 'Придумай интересный оригинальный сюжет и напиши книгу согласно всем заданным параметрам.';
+                    ? `ВНИМАНИЕ: Тебе предоставлена строгая хронология событий. Ты ОБЯЗАН шаг за шагом следовать этой цепочке нод от ШАГА 1 и далее. Не перескакивай и не перемешивай события. Плавно развивай сюжет между ними.\n\n${inputNotes}`
+                    : 'Придумай интересный оригинальный сюжет и напиши книгу согласно заданным параметрам.';
 
                 runBtn.disabled = true;
                 outputArea.value = '';
                 statusEl.textContent = '⏳ Генерация... (может занять несколько минут для больших текстов)';
 
                 try {
+                    pdfBtn.disabled = true;
+                    pdfBtn.style.opacity = '0.5';
                     const temperature = tempMap[creativity.value] ?? 0.8;
 
                     await streamCompletion(
@@ -290,6 +395,9 @@ export function initBookNode() {
                     statusEl.textContent = `✅ Готово! ${finalWords} слов`;
                     defaultTextarea.value = outputArea.value;
 
+                    pdfBtn.disabled = false;
+                    pdfBtn.style.opacity = '1';
+
                 } catch (err) {
                     outputArea.value = '';
                     statusEl.textContent = `❌ ${err.message}`;
@@ -297,7 +405,10 @@ export function initBookNode() {
                     runBtn.disabled = false;
                 }
             });
-            ui.appendChild(runBtn);
+
+            btnsRow.appendChild(runBtn);
+            btnsRow.appendChild(pdfBtn);
+            ui.appendChild(btnsRow);
 
             body.appendChild(ui);
         }
