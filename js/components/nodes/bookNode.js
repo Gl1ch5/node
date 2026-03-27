@@ -55,13 +55,35 @@ export function initBookNode() {
                 t.addEventListener('pointerdown', e => e.stopPropagation());
                 return t;
             };
-            const section = (label) => {
+            const section = (label, isToggleable = true) => {
                 const d = document.createElement('div');
                 d.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+
+                const header = document.createElement('div');
+                header.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+                let cb = null;
+                if (isToggleable) {
+                    cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.checked = true; // default active
+                    cb.style.cssText = 'pointer-events:auto;cursor:pointer;width:12px;height:12px;accent-color:var(--text-main);margin:0;';
+                    cb.addEventListener('pointerdown', e => e.stopPropagation());
+                    header.appendChild(cb);
+                }
+
                 const l = document.createElement('label');
-                l.style.cssText = 'font-size:11px;color:var(--text-muted);font-weight:500;';
+                l.style.cssText = 'font-size:11px;color:var(--text-muted);font-weight:500;cursor:pointer;';
                 l.textContent = label;
-                d.appendChild(l);
+                if (cb) {
+                    l.addEventListener('click', () => { cb.checked = !cb.checked; });
+                }
+                header.appendChild(l);
+
+                d.appendChild(header);
+
+                // Expose checkbox so we can read it later
+                d._toggleCb = cb;
                 return d;
             };
             const row2 = (...els) => {
@@ -79,6 +101,13 @@ export function initBookNode() {
             // ── Build UI ─────────────────────────────────────────────────────────
             const ui = document.createElement('div');
             ui.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+
+            // 0. Custom Prompt (topmost)
+            const customPromptWrap = section('✨ Кастомный промпт (задание)', true);
+            const customPrompt = mkTextarea('Укажите особое задание или переопределите системный промпт...', 3);
+            customPromptWrap.appendChild(customPrompt);
+            ui.appendChild(customPromptWrap);
+            ui.appendChild(divider());
 
             // 1. Genre
             const genreWrap = section('📚 Жанр'); const genre = mkSel([
@@ -279,14 +308,54 @@ export function initBookNode() {
                 const endingMap = {happy:'счастливой концовкой',tragic:'трагической концовкой',open:'открытым концом',unexpected:'неожиданной концовкой',bittersweet:'горько-сладкой концовкой',cyclical:'циклической концовкой'};
                 const langMap = {russian:'русском',english:'английском',ukrainian:'украинском',german:'немецком',french:'французском',spanish:'испанском'};
 
-                const systemPrompt = `Ты профессиональный писатель. Напиши готовую книгу строго на ${langMap[outputLang.value]} языке, в жанре ${genreMap[genre.value]}, ${styleMap[writingStyle.value]} стиле.
+                const checkState = (wrap) => wrap._toggleCb ? wrap._toggleCb.checked : false;
 
-Тон: ${toneMap[tone.value]}. Повествование ${povMap[pov.value]}. Структура: ${narrative.value === 'linear' ? 'линейная' : narrative.value === 'nonlinear' ? 'нелинейная' : narrative.value === 'flashbacks' ? 'с флэшбэками' : narrative.value === 'frame' ? 'обрамляющая' : 'параллельные сюжетные линии'}.
-Объём: примерно ${wordCount.value} слов, ${pageCount.value} страниц, ${chapterCount.value} глав. Диалоги: ${dialogueLevel.value === 'minimal' ? 'минимальные' : dialogueLevel.value === 'moderate' ? 'умеренные' : 'интенсивные'}. Описания: ${descLevel.value === 'brief' ? 'краткие' : descLevel.value === 'detailed' ? 'подробные' : 'очень детальные'}.
-Концовка: ${endingMap[ending.value]}.${prologueCheck._cb.checked ? ' Начни с пролога.' : ''}${epilogueCheck._cb.checked ? ' Закончи эпилогом.' : ''}
-Аудитория: ${audience.value === 'children' ? 'дети 6–12 лет' : audience.value === 'ya' ? 'подростки 12–18 лет' : audience.value === 'adult' ? 'взрослые' : 'все возрасты'}. Тип конфликта: ${conflict.value.replace(/_/g, ' vs ')}. Сеттинг: ${era.value}.${themes.value.trim() ? ` Ключевые темы: ${themes.value.trim()}.` : ''}${protagonist.value.trim() ? ` Главный герой: ${protagonist.value.trim()}.` : ''}${extraInstructions.value.trim() ? ` Дополнительные инструкции: ${extraInstructions.value.trim()}` : ''}
+                let sysParts = [];
+                if (checkState(customPromptWrap) && customPrompt.value.trim()) {
+                    sysParts.push(`ЗАДАНИЕ: ${customPrompt.value.trim()}`);
+                }
 
-ОБЯЗАТЕЛЬНЫЕ ПРАВИЛА ОФОРМЛЕНИЯ КНИГИ (Используй Markdown):
+                let baseInstr = 'Ты профессиональный писатель. Напиши готовую книгу';
+                if (checkState(langWrap)) baseInstr += ` строго на ${langMap[outputLang.value]} языке`;
+                if (checkState(genreWrap)) baseInstr += `, в жанре ${genreMap[genre.value]}`;
+                if (checkState(styleWrap)) baseInstr += `, в ${styleMap[writingStyle.value]} стиле`;
+                sysParts.push(baseInstr + '.');
+
+                let details = [];
+                if (checkState(toneWrap)) details.push(`Тон: ${toneMap[tone.value]}`);
+                if (checkState(povWrap)) details.push(`Повествование: ${povMap[pov.value]}`);
+                if (checkState(narrWrap)) {
+                    const nMap = {linear:'линейная',nonlinear:'нелинейная',flashbacks:'с флэшбэками',frame:'обрамляющая',parallel:'параллельные сюжетные линии'};
+                    details.push(`Структура: ${nMap[narrative.value]}`);
+                }
+                if (checkState(wordsWrap)) details.push(`Примерно ${wordCount.value} слов`);
+                if (checkState(pagesWrap)) details.push(`~${pageCount.value} страниц`);
+                if (checkState(chapWrap)) details.push(`${chapterCount.value} глав`);
+                if (checkState(dialWrap)) {
+                    const dMap = {minimal:'минимальные',moderate:'умеренные',heavy:'интенсивные'};
+                    details.push(`Диалоги: ${dMap[dialogueLevel.value]}`);
+                }
+                if (checkState(descWrap)) {
+                    const dsMap = {brief:'краткие',detailed:'подробные',very_detailed:'очень детальные'};
+                    details.push(`Описания: ${dsMap[descLevel.value]}`);
+                }
+                if (checkState(endingWrap)) details.push(`Концовка: ${endingMap[ending.value]}`);
+                if (prologueCheck._cb.checked) details.push(`Начни с пролога`);
+                if (epilogueCheck._cb.checked) details.push(`Закончи эпилогом`);
+                if (checkState(audWrap)) {
+                    const aMap = {children:'дети 6-12 лет',ya:'подростки 12-18 лет',adult:'взрослые',all:'все возрасты'};
+                    details.push(`Аудитория: ${aMap[audience.value]}`);
+                }
+                if (checkState(conflWrap)) details.push(`Конфликт: ${conflict.value.replace(/_/g, ' vs ')}`);
+                if (checkState(eraWrap)) details.push(`Сеттинг: ${era.value}`);
+
+                if (details.length > 0) sysParts.push(details.join('. ') + '.');
+
+                if (checkState(themesWrap) && themes.value.trim()) sysParts.push(`Ключевые темы: ${themes.value.trim()}`);
+                if (checkState(protWrap) && protagonist.value.trim()) sysParts.push(`Главный герой: ${protagonist.value.trim()}`);
+                if (checkState(extraWrap) && extraInstructions.value.trim()) sysParts.push(`Дополнительные инструкции: ${extraInstructions.value.trim()}`);
+
+                const systemPrompt = sysParts.join('\n') + `\n\nОБЯЗАТЕЛЬНЫЕ ПРАВИЛА ОФОРМЛЕНИЯ КНИГИ (Используй Markdown):
 1. Начни с заголовка книги (используй #).
 2. Обязательно добавь Оглавление (Table of Contents) перед началом глав (используй ## Оглавление и списки).
 3. Каждую главу выделяй заголовком уровня ## (например, ## Глава 1: Таинственный лес).
@@ -294,8 +363,8 @@ export function initBookNode() {
 5. Пиши цельный, художественный текст, готовый к публикации.`;
 
                 const userPrompt = inputNotes
-                    ? `На основе следующих заметок напиши книгу:\n\n${inputNotes}`
-                    : 'Придумай интересный оригинальный сюжет и напиши книгу согласно всем заданным параметрам.';
+                    ? `ВНИМАНИЕ: Тебе предоставлена строгая хронология событий. Ты ОБЯЗАН шаг за шагом следовать этой цепочке нод от ШАГА 1 и далее. Не перескакивай и не перемешивай события. Плавно развивай сюжет между ними.\n\n${inputNotes}`
+                    : 'Придумай интересный оригинальный сюжет и напиши книгу согласно заданным параметрам.';
 
                 runBtn.disabled = true;
                 outputArea.value = '';
