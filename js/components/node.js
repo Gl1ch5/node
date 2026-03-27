@@ -163,6 +163,7 @@ export function createNode(worldX, worldY, typeName = 'text') {
 
     const gripIcon = `<svg viewBox="0 0 24 24"><circle cx="8" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="8" cy="18" r="2"/><circle cx="16" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg>`;
     const trashIcon = `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+    const micIcon = `<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>`;
 
     const def = getNodeDefinition(typeName) || getNodeDefinition('text');
     const title = def?.title || 'Заметка';
@@ -171,6 +172,7 @@ export function createNode(worldX, worldY, typeName = 'text') {
         <div class="node-header">
             <div class="drag-icon">${gripIcon}</div>
             <input type="text" class="node-title" value="${title}">
+            <button class="node-mic-btn" title="Голосовой ввод (Whisper)" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:2px; display:flex; align-items:center;">${micIcon}</button>
             <button class="node-delete-btn" title="Удалить ноду">${trashIcon}</button>
         </div>
         <div class="node-body">
@@ -201,6 +203,124 @@ export function createNode(worldX, worldY, typeName = 'text') {
     deleteBtn.addEventListener('pointerdown', (e) => {
         e.stopPropagation(); // Не перехватываем выделение и таскание
         deleteNode(id);
+    });
+
+    // Voice Input Logic (Whisper)
+    const micBtn = nodeEl.querySelector('.node-mic-btn');
+    let mediaRecorder = null;
+    let audioChunks = [];
+
+    micBtn.addEventListener('pointerdown', async (e) => {
+        e.stopPropagation();
+
+        // Find the active text target (either the default textarea or first text input if hidden)
+        const textarea = nodeEl.querySelector('.node-textarea');
+        const customTarget = textarea.style.display !== 'none'
+            ? textarea
+            : nodeEl.querySelector('textarea:not([readonly]), input[type="text"]:not(.node-title)');
+
+        if (!customTarget) {
+            alert('В этой ноде нет подходящего поля для ввода текста.');
+            return;
+        }
+
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            // Stop recording
+            mediaRecorder.stop();
+            micBtn.classList.remove('recording');
+            micBtn.title = "Голосовой ввод (Whisper)";
+        } else {
+            // Start recording
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.addEventListener('dataavailable', event => {
+                    audioChunks.push(event.data);
+                });
+
+                mediaRecorder.addEventListener('stop', async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    // Stop tracks to release microphone
+                    stream.getTracks().forEach(track => track.stop());
+
+                    // Prepare UI for transcription
+                    const originalPlaceholder = customTarget.placeholder;
+                    customTarget.placeholder = "⏳ Распознавание голоса (Whisper)...";
+
+                    try {
+                        // Dynamically import AI utils to get keys and proxy logic
+                        const aiUtils = await import('../core/aiUtils.js');
+                        const provider = aiUtils.getProvider();
+
+                        if (provider !== 'groq') {
+                            alert("Whisper (Голосовой ввод) в данный момент поддерживается только через провайдера Groq.");
+                            customTarget.placeholder = originalPlaceholder;
+                            return;
+                        }
+
+                        const apiKey = aiUtils.getApiKey('groq');
+                        if (!apiKey) {
+                            alert("Пожалуйста, укажите Groq API ключ в настройках (⚙ -> Глобальный ИИ).");
+                            customTarget.placeholder = originalPlaceholder;
+                            return;
+                        }
+
+                        const formData = new FormData();
+                        // For Groq Whisper, we provide the file, model, and optionally language
+                        formData.append('file', audioBlob, 'audio.webm');
+                        formData.append('model', 'whisper-large-v3');
+
+                        // Use aiUtils.getBaseUrl() which handles the proxy wrapper
+                        let baseUrl = aiUtils.getBaseUrl('groq');
+                        // Ensure we hit the audio transcription endpoint correctly.
+                        // getBaseUrl returns something like `https://api.groq.com/openai/v1` or `https://corsproxy.io/?url=...openai/v1`
+                        // We need to append `/audio/transcriptions`.
+                        // If it uses corsproxy.io, appending directly might break the query parameter format,
+                        // so we need to construct it carefully.
+                        let transcriptionUrl = 'https://api.groq.com/openai/v1/audio/transcriptions';
+                        if (aiUtils.useProxy()) {
+                            transcriptionUrl = `https://corsproxy.io/?url=${encodeURIComponent(transcriptionUrl)}`;
+                        }
+
+                        const response = await fetch(transcriptionUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${apiKey}`
+                                // Do NOT set Content-Type, browser will automatically set it to multipart/form-data with boundary
+                            },
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            const err = await response.json().catch(()=>({}));
+                            throw new Error(err.error?.message || `Ошибка сервера: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        if (data.text) {
+                            const currentVal = customTarget.value;
+                            customTarget.value = currentVal ? currentVal + ' ' + data.text : data.text;
+                        }
+
+                    } catch (err) {
+                        console.error('Whisper Error:', err);
+                        alert(`Ошибка распознавания: ${err.message}`);
+                    } finally {
+                        customTarget.placeholder = originalPlaceholder;
+                    }
+                });
+
+                mediaRecorder.start();
+                micBtn.classList.add('recording');
+                micBtn.title = "Остановить запись...";
+
+            } catch (err) {
+                console.error("Mic Access Error:", err);
+                alert("Ошибка доступа к микрофону. Убедитесь, что разрешили его использование в браузере.");
+            }
+        }
     });
 
     // ИЗОЛИРОВАННАЯ ЛОГИКА ПЕРЕТАСКИВАНИЯ НОДЫ

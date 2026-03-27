@@ -47,6 +47,16 @@
 }
 .node-delete-btn svg { width: 14px; height: 14px; fill: currentColor; }
 
+.node-mic-btn svg { width: 16px; height: 16px; fill: currentColor; }
+.node-mic-btn:hover { color: var(--text-main) !important; background: var(--btn-hover) !important; border-radius: 4px; }
+.node-mic-btn.recording { color: #ff4a4a !important; animation: pulse 1.5s infinite; }
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 
 .node-body { padding: 0 16px 16px 16px; position: relative; }
 

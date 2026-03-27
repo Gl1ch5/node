@@ -22,17 +22,44 @@ export function getApiKey(provider = getProvider()) {
     return localStorage.getItem('nn_groq_key') || '';
 }
 
+export function useProxy() {
+    const el = document.getElementById('lab-use-proxy');
+    if (el) {
+        // save state to avoid losing it on reload
+        const isChecked = el.checked;
+        localStorage.setItem('nn_use_proxy', isChecked ? 'true' : 'false');
+        return isChecked;
+    }
+    return localStorage.getItem('nn_use_proxy') === 'true';
+}
+
+// Ensure the UI element matches the saved state on load (handled implicitly here, but ideally should be set on init)
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('lab-use-proxy');
+    if (el) el.checked = localStorage.getItem('nn_use_proxy') === 'true';
+});
+
 export function getBaseUrl(provider = getProvider()) {
-    return provider === 'deepseek'
+    const rawUrl = provider === 'deepseek'
         ? 'https://api.deepseek.com/v1'
         : 'https://api.groq.com/openai/v1';
+
+    if (useProxy()) {
+        // corsproxy.io allows routing requests bypassing CORS and country blocks.
+        // Another option is allorigins, but corsproxy passes headers nicely.
+        return `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`;
+    }
+    return rawUrl;
 }
 
 export function getHeaders(provider = getProvider()) {
-    return {
+    const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${getApiKey(provider)}`
     };
+
+    // corsproxy.io requires x-requested-with sometimes, but groq handles authorization in header
+    return headers;
 }
 
 export function getModel(provider = getProvider()) {

@@ -118,6 +118,11 @@
                 <input type="password" id="lab-deepseek-key" placeholder="DeepSeek API Key (sk-...)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
             </div>
 
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-main);cursor:pointer;pointer-events:auto;">
+                <input type="checkbox" id="lab-use-proxy" style="pointer-events:auto;cursor:pointer;accent-color:var(--text-main);">
+                🌐 Web Proxy (Обход блокировок РФ)
+            </label>
+
             <select id="lab-model-select" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
                 <option value="llama3-8b-8192">llama3-8b-8192 (Default)</option>
                 <option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>
