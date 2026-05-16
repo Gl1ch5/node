@@ -275,7 +275,19 @@ export function initBookNode() {
 
                 const container = document.createElement('div');
                 container.innerHTML = `
-                    <div style="padding: 40px; font-family: 'Times New Roman', serif; line-height: 1.6; color: #000;">
+                    <div class="pdf-container">
+                        <style>
+                            .pdf-container { padding: 40px; font-family: 'Times New Roman', serif; line-height: 1.6; color: #000; }
+                            .pdf-container h1 { font-size: 28px; text-align: center; margin-bottom: 30px; page-break-after: always; }
+                            .pdf-container h2 { font-size: 22px; margin-top: 20px; margin-bottom: 15px; page-break-before: always; }
+                            .pdf-container h3 { font-size: 18px; margin-top: 15px; margin-bottom: 10px; }
+                            .pdf-container p { font-size: 14px; text-align: justify; margin-bottom: 10px; text-indent: 1.5em; }
+                            .pdf-container ul, .pdf-container ol { margin-bottom: 15px; padding-left: 30px; }
+                            .pdf-container li { font-size: 14px; margin-bottom: 5px; }
+                            .pdf-container blockquote { font-style: italic; border-left: 3px solid #ccc; margin: 15px 30px; padding-left: 15px; color: #444; }
+                            /* First page elements logic for Table of contents so it doesn't break page early */
+                            .pdf-container > h2:first-of-type { page-break-before: auto; }
+                        </style>
                         ${htmlContent}
                     </div>
                 `;

@@ -78,6 +78,7 @@
             <select id="lab-provider-select" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
                 <option value="groq">Groq</option>
                 <option value="deepseek">DeepSeek</option>
+                <option value="custom">Custom</option>
             </select>
 
             <div id="lab-groq-section" style="display:flex;flex-direction:column;gap:4px;">
@@ -85,6 +86,9 @@
             </div>
             <div id="lab-deepseek-section" style="display:none;flex-direction:column;gap:4px;">
                 <input type="password" id="lab-deepseek-key" placeholder="DeepSeek API Key (sk-...)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
+            </div>
+            <div id="lab-custom-section" style="display:none;flex-direction:column;gap:4px;">
+                <input type="password" id="lab-custom-key" placeholder="Custom API Key (optional)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
             </div>
             <input type="text" id="lab-custom-base-url" placeholder="Custom Base URL (optional)" style="width:100%;background:var(--input-bg);color:var(--text-main);border:1px solid var(--node-border);border-radius:6px;padding:8px;font-size:12px;outline:none;pointer-events:auto;">
 

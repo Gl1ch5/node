@@ -279,8 +279,10 @@ export function initPanelManager() {
     const providerSelect = document.getElementById('lab-provider-select');
     const groqSection = document.getElementById('lab-groq-section');
     const deepseekSection = document.getElementById('lab-deepseek-section');
+    const customSection = document.getElementById('lab-custom-section');
     const groqKeyInput = document.getElementById('lab-api-key');
     const deepseekKeyInput = document.getElementById('lab-deepseek-key');
+    const customKeyInput = document.getElementById('lab-custom-key');
     const customBaseUrlInput = document.getElementById('lab-custom-base-url');
     const modelSelect = document.getElementById('lab-model-select');
     const btnFetchModels = document.getElementById('btn-fetch-models');
@@ -288,6 +290,7 @@ export function initPanelManager() {
     // Restore saved API Keys
     if (groqKeyInput) groqKeyInput.value = localStorage.getItem('nn_groq_key') || '';
     if (deepseekKeyInput) deepseekKeyInput.value = localStorage.getItem('nn_deepseek_key') || '';
+    if (customKeyInput) customKeyInput.value = localStorage.getItem('nn_custom_key') || '';
     if (customBaseUrlInput) customBaseUrlInput.value = localStorage.getItem('nn_custom_base_url') || '';
     if (providerSelect) providerSelect.value = localStorage.getItem('nn_provider') || 'groq';
 
@@ -299,17 +302,21 @@ export function initPanelManager() {
     if (providerSelect) {
         providerSelect.addEventListener('change', () => {
             localStorage.setItem('nn_provider', providerSelect.value);
-            const isDeepSeek = providerSelect.value === 'deepseek';
-            groqSection.style.display = isDeepSeek ? 'none' : 'flex';
-            deepseekSection.style.display = isDeepSeek ? 'flex' : 'none';
+            const pVal = providerSelect.value;
+            groqSection.style.display = pVal === 'groq' ? 'flex' : 'none';
+            deepseekSection.style.display = pVal === 'deepseek' ? 'flex' : 'none';
+            if (customSection) customSection.style.display = pVal === 'custom' ? 'flex' : 'none';
 
-            if (isDeepSeek) {
+            if (pVal === 'deepseek') {
                 modelSelect.innerHTML = '';
                 DEEPSEEK_MODELS.forEach(m => {
                     const opt = document.createElement('option');
                     opt.value = m.id; opt.textContent = m.label;
                     modelSelect.appendChild(opt);
                 });
+            } else if (pVal === 'custom') {
+                // Models will be loaded dynamically via fetch button
+                modelSelect.innerHTML = '<option value="">(Загрузите модели)</option>';
             } else {
                 modelSelect.innerHTML = '<option value="llama3-8b-8192">llama3-8b-8192 (Default)</option><option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>';
             }
@@ -320,6 +327,7 @@ export function initPanelManager() {
 
     if (groqKeyInput) groqKeyInput.addEventListener('input', () => localStorage.setItem('nn_groq_key', groqKeyInput.value.trim()));
     if (deepseekKeyInput) deepseekKeyInput.addEventListener('input', () => localStorage.setItem('nn_deepseek_key', deepseekKeyInput.value.trim()));
+    if (customKeyInput) customKeyInput.addEventListener('input', () => localStorage.setItem('nn_custom_key', customKeyInput.value.trim()));
     if (customBaseUrlInput) customBaseUrlInput.addEventListener('input', () => localStorage.setItem('nn_custom_base_url', customBaseUrlInput.value.trim()));
 
     if (btnFetchModels) {
@@ -337,17 +345,27 @@ export function initPanelManager() {
                         modelSelect.appendChild(opt);
                     });
                 } else {
-                    const res = await fetch('https://api.groq.com/openai/v1/models', {
-                        headers: { 'Authorization': `Bearer ${apiKey}` }
+                    // Try to fetch from the specific baseUrl or fallback to groq
+                    let baseUrl = 'https://api.groq.com/openai/v1';
+                    import('./aiUtils.js').then(async mUtils => {
+                        baseUrl = mUtils.getBaseUrl(provider);
+                        const res = await fetch(`${baseUrl}/models`, {
+                            headers: { 'Authorization': `Bearer ${apiKey}` }
+                        });
+                        if (!res.ok) throw new Error('Ошибка при загрузке моделей');
+                        const data = await res.json();
+                        modelSelect.innerHTML = '';
+                        data.data.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m.id; opt.textContent = m.id;
+                            modelSelect.appendChild(opt);
+                        });
+                        btnFetchModels.textContent = 'Загрузить Модели';
+                    }).catch(e => {
+                        alert(e.message);
+                        btnFetchModels.textContent = 'Загрузить Модели';
                     });
-                    if (!res.ok) throw new Error('Ошибка при загрузке моделей');
-                    const data = await res.json();
-                    modelSelect.innerHTML = '';
-                    data.data.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id; opt.textContent = m.id;
-                        modelSelect.appendChild(opt);
-                    });
+                    return; // exit early since it's handled async
                 }
             } catch(e) {
                 alert(e.message);

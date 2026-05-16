@@ -12,6 +12,9 @@ export function getProvider() {
 }
 
 export function getApiKey(provider = getProvider()) {
+    if (provider === 'custom') {
+        return localStorage.getItem('nn_custom_key') || '';
+    }
     if (provider === 'deepseek') {
         return localStorage.getItem('nn_deepseek_key') || '';
     }
@@ -20,7 +23,8 @@ export function getApiKey(provider = getProvider()) {
 
 export function getBaseUrl(provider = getProvider()) {
     const custom = localStorage.getItem('nn_custom_base_url');
-    if (custom) return custom;
+    if (provider === 'custom') return custom || '';
+    if (custom) return custom; // still allow override for other providers if set
     return provider === 'deepseek'
         ? 'https://api.deepseek.com/v1'
         : 'https://api.groq.com/openai/v1';
