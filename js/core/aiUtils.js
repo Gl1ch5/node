@@ -13,16 +13,14 @@ export function getProvider() {
 
 export function getApiKey(provider = getProvider()) {
     if (provider === 'deepseek') {
-        const el = document.getElementById('lab-deepseek-key');
-        if (el && el.value.trim()) { localStorage.setItem('nn_deepseek_key', el.value.trim()); return el.value.trim(); }
         return localStorage.getItem('nn_deepseek_key') || '';
     }
-    const el = document.getElementById('lab-api-key');
-    if (el && el.value.trim()) { localStorage.setItem('nn_groq_key', el.value.trim()); return el.value.trim(); }
     return localStorage.getItem('nn_groq_key') || '';
 }
 
 export function getBaseUrl(provider = getProvider()) {
+    const custom = localStorage.getItem('nn_custom_base_url');
+    if (custom) return custom;
     return provider === 'deepseek'
         ? 'https://api.deepseek.com/v1'
         : 'https://api.groq.com/openai/v1';
@@ -56,7 +54,7 @@ export async function streamCompletion(body, onChunk, onToolCall = null) {
     const model = getModel(provider);
 
     // Inject model if not provided
-    const payload = { model, ...body, stream: true };
+    const payload = { ...body, model, stream: true };
 
     const response = await fetch(`${getBaseUrl(provider)}/chat/completions`, {
         method: 'POST',
@@ -139,7 +137,7 @@ export async function complete(body) {
     const provider = getProvider();
     const model = getModel(provider);
 
-    const payload = { model, ...body };
+    const payload = { ...body, model };
 
     const response = await fetch(`${getBaseUrl(provider)}/chat/completions`, {
         method: 'POST',

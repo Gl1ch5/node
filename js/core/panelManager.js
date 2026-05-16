@@ -281,12 +281,14 @@ export function initPanelManager() {
     const deepseekSection = document.getElementById('lab-deepseek-section');
     const groqKeyInput = document.getElementById('lab-api-key');
     const deepseekKeyInput = document.getElementById('lab-deepseek-key');
+    const customBaseUrlInput = document.getElementById('lab-custom-base-url');
     const modelSelect = document.getElementById('lab-model-select');
     const btnFetchModels = document.getElementById('btn-fetch-models');
 
     // Restore saved API Keys
     if (groqKeyInput) groqKeyInput.value = localStorage.getItem('nn_groq_key') || '';
     if (deepseekKeyInput) deepseekKeyInput.value = localStorage.getItem('nn_deepseek_key') || '';
+    if (customBaseUrlInput) customBaseUrlInput.value = localStorage.getItem('nn_custom_base_url') || '';
     if (providerSelect) providerSelect.value = localStorage.getItem('nn_provider') || 'groq';
 
     const DEEPSEEK_MODELS = [
@@ -318,6 +320,7 @@ export function initPanelManager() {
 
     if (groqKeyInput) groqKeyInput.addEventListener('input', () => localStorage.setItem('nn_groq_key', groqKeyInput.value.trim()));
     if (deepseekKeyInput) deepseekKeyInput.addEventListener('input', () => localStorage.setItem('nn_deepseek_key', deepseekKeyInput.value.trim()));
+    if (customBaseUrlInput) customBaseUrlInput.addEventListener('input', () => localStorage.setItem('nn_custom_base_url', customBaseUrlInput.value.trim()));
 
     if (btnFetchModels) {
         btnFetchModels.addEventListener('click', async () => {

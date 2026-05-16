@@ -72,23 +72,18 @@ function extractNodeText(node) {
 
     let content = '';
 
-    // Get text from standard textarea if it exists and is visible
-    const defaultTextarea = node.el.querySelector('.node-textarea');
-    if (defaultTextarea && defaultTextarea.style.display !== 'none') {
-        content = defaultTextarea.value;
-    } else {
-        // Otherwise, gather all visible input/textarea values in the body
-        const inputs = node.el.querySelectorAll('.node-body input:not([type="checkbox"]):not(.node-title), .node-body textarea:not([readonly])');
-        let parts = [];
-        inputs.forEach(inp => {
-            if (inp.value && inp.value.trim()) {
-                // If it has a placeholder, use it as a label
-                const label = inp.placeholder ? `${inp.placeholder}: ` : '';
-                parts.push(`${label}${inp.value}`);
-            }
-        });
-        content = parts.join('\n');
-    }
+    // Gather all visible input/textarea values in the body.
+    // Check offsetParent !== null to see if an element is currently visible.
+    const inputs = node.el.querySelectorAll('.node-body input:not([type="checkbox"]):not(.node-title), .node-body textarea:not([readonly])');
+    let parts = [];
+    inputs.forEach(inp => {
+        if (inp.offsetParent !== null && inp.value && inp.value.trim()) {
+            // If it has a placeholder, use it as a label, except for the default textarea
+            const label = (inp.placeholder && !inp.classList.contains('node-textarea')) ? `${inp.placeholder}: ` : '';
+            parts.push(`${label}${inp.value}`);
+        }
+    });
+    content = parts.join('\n');
 
     return { title, content: content.trim() };
 }
