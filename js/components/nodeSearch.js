@@ -33,6 +33,10 @@ export function initNodeSearch() {
     searchMenu.appendChild(listContainer);
     document.body.appendChild(searchMenu);
 
+    searchMenu.addEventListener('wheel', e => {
+        e.stopPropagation();
+    });
+
     let lastX = 0;
     let lastY = 0;
     let pendingEdge = null; // { startNodeId, startType, targetType }
@@ -51,6 +55,35 @@ export function initNodeSearch() {
                 groups[cat].push(t);
             }
         });
+
+        // Handle "text" node independently first
+        if (groups['Basic']) {
+            const textIdx = groups['Basic'].findIndex(t => t.typeName === 'text');
+            if (textIdx !== -1) {
+                const tNode = groups['Basic'].splice(textIdx, 1)[0];
+                const item = document.createElement('div');
+                item.style.cssText = `
+                    padding: 6px 8px; font-size: 13px; color: var(--text-main); font-weight: 600;
+                    cursor: pointer; border-radius: 4px; transition: background 0.1s; border-bottom: 1px solid var(--node-border); margin-bottom: 4px;
+                `;
+                item.textContent = tNode.title;
+                item.addEventListener('mouseover', () => item.style.background = 'var(--btn-hover)');
+                item.addEventListener('mouseout', () => item.style.background = 'transparent');
+                item.addEventListener('click', () => {
+                    const wPos = screenToWorld(lastX, lastY);
+                    const newNodeId = createNode(wPos.x, wPos.y, tNode.typeName);
+                    if (pendingEdge) {
+                        const edgeData = { ...pendingEdge };
+                        import('./edge.js').then(m => m.createEdge(edgeData.startNodeId, edgeData.startType, newNodeId, edgeData.targetType));
+                    }
+                    closeMenu();
+                });
+                listContainer.appendChild(item);
+            }
+            if (groups['Basic'].length === 0) {
+                delete groups['Basic'];
+            }
+        }
 
         Object.keys(groups).sort().forEach(cat => {
             const catLabel = document.createElement('div');

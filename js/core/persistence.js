@@ -54,14 +54,13 @@ function serialise() {
 export async function applySnapshot(data, { keepHistory = false } = {}) {
     suppressSave = true;
 
-    const { createNode } = await import('../components/node.js');
+    const { createNode, deleteNode } = await import('../components/node.js');
     const { renderEdges } = await import('../components/edge.js');
     const { updateTransform } = await import('./workspace.js');
 
-    // Clear existing nodes
+    // Clear existing nodes properly
     Object.keys(state.nodes).forEach(id => {
-        state.nodes[id].el.remove();
-        delete state.nodes[id];
+        deleteNode(id);
     });
     state.edges.length = 0;
 
